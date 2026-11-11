@@ -1,0 +1,243 @@
+%*****************************************************************************
+% Layout-Vorschlag zur Erstellung von Bachelor-, Master oder Diplomarbeiten  *
+% Modifikation moeglich                                                      *
+% S. Gippert, 2012                                                           *
+% ****************************************************************************
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}   
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{algorithm2e}
+\usepackage{graphicx}
+\usepackage[T1]{fontenc}   
+\usepackage[ngerman]{babel}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{mathalpha}
+\usepackage{amsthm}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{setspace}
+%\usepackage{listings}
+\usepackage{listingsutf8}
+\usepackage{adjustbox}
+\usepackage{geometry}
+ \geometry{
+ a4paper,
+ bindingoffset=6mm,
+ total={160mm,240mm},
+ left=25mm,
+ top=25mm,
+ }
+\usepackage{parskip}
+\usepackage[backend=biber,style=numeric
+]{biblatex}
+\addbibresource{thesisbib.bib}
+\usepackage{pdflscape}
+\usepackage{url}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+\usepackage[simplified]{pgf-umlcd}
+\usetikzlibrary{shapes.geometric}
+\usetikzlibrary{positioning}
+\usepackage{tocloft}
+\usepackage[colorlinks=true, linkcolor=black, urlcolor=black, citecolor=black]{hyperref}
+
+\definecolor{c1}{RGB}{31,119,180} 
+\definecolor{c2}{RGB}{255,127,14}
+\definecolor{c3}{RGB}{44,160,44}  
+\definecolor{c4}{RGB}{214,39,40}
+\definecolor{c5}{RGB}{148,103,189} 
+\definecolor{c6}{RGB}{23,190,207}
+\definecolor{c7}{RGB}{140,86,75}  
+\definecolor{c8}{RGB}{227,119,194}
+\definecolor{c9}{RGB}{188,189,34}
+
+\DeclareMathAlphabet{\mathdutch}{U}{dutchcal}{m}{n}
+
+\renewcommand{\umltextcolor}{black} % Textfarbe
+\renewcommand{\umldrawcolor}{black}  % Rahmen- und Linienfarbe
+\renewcommand{\umlfillcolor}{white}
+
+\DefineBibliographyStrings{ngerman}{
+  andothers = {et\addabbrvspace al\adddot},
+  andmore   = {et\addabbrvspace al\adddot},
+}
+\newcommand{\umlagg}{\tikz[baseline=-0.5ex]{
+    \draw (0,0) -- (0.4,0); 
+    \draw (0.4,0) node[draw, diamond, inner sep=1.5pt, anchor=west] {};
+}}
+
+% Befehl für den gestrichelten Pfeil
+\newcommand{\umldash}{\tikz[baseline=-0.5ex]{
+    \draw[dashed, ->] (0,0) -- (0.6,0);
+}}
+
+\widowpenalty=10000
+\clubpenalty=10000 
+
+\newenvironment{Beweis}{\begin{proof}[Beweis]}{\end{proof}}
+%\theoremstyle{captioned}
+\newtheorem{Definition}{Definition}[section]% Definitionen
+\newtheorem{Satz}{Satz}[section]% Definitionen
+\def\Real{{{\rm I\!R}}}
+
+\DeclareMathOperator{\dist}{dist}
+\DeclareMathOperator{\midi}{mid}
+\DeclareMathOperator{\rank}{Rang}
+\DeclareMathOperator{\integer}{integer\,}
+\DeclareMathOperator{\subjectto}{s.t.\,}
+\DeclareMathOperator{\argmin}{argmin\,}
+\DeclareMathOperator{\erf}{erf\,}
+\DeclareMathOperator{\e}{e}
+\newcommand{\sigmoid}{\zeta}
+\newcommand{\E}[1]{\mathbb E \left(#1\right)}
+\newcommand{\Var}[1]{\textup{Var} \left(#1\right)}
+\newcommand{\pdf}{Wahrscheinlichkeitsdichtefunktion }
+\newcommand{\cdf}{Verteilungsfunktion }
+\newcommand{\Prob}[1]{\mathbb P\left(#1\right)}
+
+\setlength{\tabcolsep}{3pt}
+
+\newcounter{rowcount}
+\newcommand{\nextrow}{%
+    \stepcounter{rowcount}%
+    \ifnum\value{rowcount}=5
+        \setcounter{rowcount}{0}%
+        \\ \hline % Nach 5 Zeilen: Umbruch erlaubt + Linie
+    \else
+        \\* % Sonst: Umbruch verboten
+    \fi
+}
+
+% Dokumentbeginn
+\begin{document}
+
+% Titelseite ----------ANPASSEN!----------------------
+\begin{titlepage}
+\title{{\textbf{Report}} \\[1.5cm] \textbf{Project 1: Jacobi Sweeps with CUDA} \\[1cm]}
+\author{\textbf{Group 2} \\Laura Arango \\Andreas Serin}
+\date{\today}
+\maketitle
+\vfill 
+% Weitere Angaben (Arbeitsgruppe, Institut, Universität, Betreuung usw.)
+\begin{center}
+\begin{figure}[h]
+\centering
+\includegraphics[width=4.75cm]{siegel}
+%\includegraphics[scale=0.25]{uzk_logo} % bunt
+\end{figure} 
+\begin{large}
+%Lehrstuhl für Visualisierung und Visual Analytics \\[3pt]
+Department Mathematik/Informatik \\[2pt]
+Mathematisch-Naturwissenschaftliche Fakultät \\[2pt]
+Universität zu Köln \\[1.5cm]
+Betreuer: Dr. Martin Lanser \\[2pt]
+%Erstgutachter: Dr. Alexander Apke
+\end{large}
+\end{center}
+\vfill 
+% Unterdrücken der Seitennummerierung
+\thispagestyle{empty}
+\end{titlepage}
+\clearpage \thispagestyle{empty} \cleardoublepage 
+
+\makeatletter
+\def\l@figure#1#2{\@dottedtocline{1}{0em}{4ex}{#1}{#2}}
+\def\l@table#1#2{\@dottedtocline{1}{0em}{4ex}{#1}{#2}}
+ \def\l@lstlisting#1#2{\@dottedtocline{1}{0em}{4ex}{#1}{#2}}
+  \def\l@algocf#1#2{\@dottedtocline{1}{0em}{4ex}{#1}{#2}}
+\makeatother
+
+\singlespacing
+
+\setlength{\cftsecindent}{0.75em}    % Vorher ca. 1.5em
+\setlength{\cftsubsecindent}{1.9em}  % Vorher ca. 3.8em
+\setlength{\cftsubsubsecindent}{3.5em} % Vorher ca. 7.0em
+
+\pagestyle{plain}
+\cleardoublepage
+\setcounter{page}{1}
+\pagenumbering{roman}
+\thispagestyle{plain}
+\tableofcontents
+\newpage
+\thispagestyle{plain}
+
+%\cleardoublepage
+%\addcontentsline{toc}{section}{\listfigurename}
+%\listoffigures
+%\newpage
+%\cleardoublepage
+%\addcontentsline{toc}{section}{\listtablename}
+%\listoftables
+%\newpage
+
+\renewcommand{\listalgorithmcfname}{Verzeichnis der Algorithmen}%
+\renewcommand{\algorithmcfname}{Algorithmus}%
+\renewcommand{\algorithmautorefname}{\algorithmcfname}%
+
+%\renewcommand{\lstlistingname}{Datei}
+%\renewcommand{\lstlistlistingname}{Verzeichnis der Dateien}
+
+
+%\renewcommand\cftlistalgorithmsaftersnum{:}
+%\renewcommand\cftalgorithmscfpresnum{Algorithmus~}
+%\cftsetindents{algorithms}{1.5em}{7em}
+
+
+%renewcommand\cftlstlistlistingaftersnum{:}
+%renewcommand\cftlstlistlistingpresnum{Datei~}
+%\cftsetindents{lstlistlisting}{1.5em}{7em}
+
+
+
+%\cleardoublepage
+%\addcontentsline{toc}{section}{\listalgorithmcfname} 
+%\listofalgorithms
+%\newpage
+
+
+%\addcontentsline{toc}{section}{\lstlistlistingname}
+%\lstlistoflistings
+
+\newpage
+\cleardoublepage
+\thispagestyle{plain}
+\input{chapter_abk}
+ 
+\newpage
+\cleardoublepage
+\thispagestyle{plain}
+\input{chapter_var}
+
+\newpage
+\cleardoublepage
+\onehalfspacing
+% Dateien
+\input{Einleitung}
+\input{Chap2}
+\input{Chap3}
+\input{Chap4}
+\input{Chap5}
+\input{Chap6}
+\cleardoublepage
+\appendix
+\singlespacing
+%\input{appendix}
+\newpage
+     	
+\printbibliography
+\addcontentsline{toc}{section}{Literatur}
+\newpage
+\cleardoublepage
+%\input{Erklaerung}
+%\addcontentsline{toc}{section}{Erklärung an Eides statt}
+\end{document}

@@ -1,0 +1,196 @@
+%%%%%%%%%%%%%%%%%
+% Implementierung
+%%%%%%%%%%%%%%%%%
+\section{Implementierung}\label{cap:impl}
+Der Algorithmus wird in C++ unter Verwendung von NetworKit 11.2 implementiert. 
+Als Ausgangsbasis dient der bereitgestellte Code aus \cite{NAZERI2023}. 
+Zusätzlich wird Python verwendet, um zufällige Graphen zu generieren, Ergebnisse zu visualisieren sowie nicht-tabellierte Quantile statistischer Verteilungen zu berechnen. 
+Um das Programm in verschiedenen Konfigurationen und auf unterschiedlichen Datensätzen auszuführen, wird ein Bash-Skript erstellt. 
+Der vollständige Quellcode ist im GitHub-Repository \url{https://github.com/serin2001/GBP-GA} verfügbar. 
+
+%\subsection{Voraussetzungen}
+Die Hardwareausstattung und die installierte Software, die für die Entwicklung und Durchführung der Experimente verwendet wurden, sind nachfolgend zusammengefasst:
+%\input{Chap04_tab_voraussetz.tex}
+
+%%%%%%%%%%%%%%%%%
+% Probleminstanzen
+%%%%%%%%%%%%%%%%%
+\subsection{Instanzen}
+Der Algorithmus wird anhand von mehreren Datensätzen evaluiert. 
+Alle Graphen werden als ungerichtet und ungewichtet behandelt. Im Rahmen des Preprocessings werden gerichtete oder gewichtete Graphen transformiert. Gerichtete Kanten werden als ungerichtet eingelesen. Anschließend werden Kantengewichte, Mehrfachkanten und Schleifen entfernt. Bei den mit $^*$ markierten Datensätzen ergeben sich dadurch die angegebenen Kantenzahlen. Alle verwendeten Graphen mit Ausnahme von \texttt{cite} sind zusammenhängend. 
+
+Die nachfolgenden 13 Graphen stammen aus öffentlich zugänglichen Datenbanken \cite{snapnets, nr}. Sie dienen als Benchmark-Instanzen für den Vergleich der Güte verschiedener Lösungsverfahren. Tabelle~\ref{tab:Chap04_tab_benchmarks} vermittelt einen Überblick über diese Testinstanzen. Die Spalte Dateiname gibt den entsprechenden Suchbegriff für die jeweilige Datenbank und ggf. die Bezeichnung innerhalb der Archivdatei an. 
+
+%\input{Chap04_tab_benchmarks}
+
+\lstset{%
+    language         = C++,
+    inputencoding    = utf8,
+    extendedchars=true,
+    literate=%
+    {ő}{{{\H{o}}}}1
+        {Ő}{{{\H{O}}}}1
+        {ö}{{\"o}}1 {ä}{{\"a}}1 {ü}{{\"u}}1 
+        {Ö}{{\"O}}1 {Ä}{{\"A}}1 {Ü}{{\"U}}1 
+        {ß}{{\ss}}1 
+         {ű}{{\H{u}}}1 {Ű}{{\H{U}}}1 % Hungarian fix
+        {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1,
+    basicstyle       = \scriptsize\ttfamily,
+    keywordstyle     = \bfseries\color{blue},
+    stringstyle      = \color{magenta},
+    commentstyle     = \color{ForestGreen},
+    showstringspaces = false,
+}
+\lstset{ 
+  basicstyle=\scriptsize\ttfamily,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,	                   % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  numbers=none,                    % where to put the line-numbers; possible values are (none, left, right)
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=5,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  tabsize=1 ,	                   % sets default tabsize to 2 spaces
+  title=\lstname                   
+}
+
+Der Algorithmus wurde auch auf zufällig generierten Graphen getestet. Es wurden 100 Erd\H{o}s--R\'enyi-Graphen mit $1000$ Knoten und 6000 Kanten sowie 100 Barab\'asi--Albert-Graphen mit $1000$ Knoten und 3000 Kanten generiert. Diese Anzahl wurde im Hinblick auf Konfidenzintervalle gewählt. Während alle generierten Erd\H{o}s--R\'enyi-Graphen eine Brennzahl $b(G) = 5$ aufweisen, zeigen die Barab\'asi--Albert-Graphen eine Streuung. 
+%\input{Chap04_fig_BA_ER}
+%Die beiden Zufallsgraphentypen werden in Abbildungen~\ref{fig:BA_plot} und \ref{fig:ER_plot} visualisiert. 
+
+Zu Testzwecken während der Entwicklung wurden zudem die Pfadgraphen $P_{64}$ und $P_{81}$ hinzugefügt. Für die optimale Länge der Brennsequenz gilt: $b(P_{n})=\lceil \sqrt{n}\rceil$. 
+Für solche Pfadgraphen sind effiziente Lösungsverfahren verfügbar.  
+%%%%%%%%%%%%%%%%%
+% Darstellung
+%%%%%%%%%%%%%%%%%
+\subsubsection{Dateiformat}
+Nachfolgend wird ein Ausschnitt von \texttt{P64.csv} erklärt. Der Graph besitzt 64 Knoten und 63 Kanten. Die Nummerierung der Knoten beginnt bei 1. Ungewichtet bedeutet, dass ab der dritten Zeile keine Kantengewichte angegeben werden, die das Programm verwerfen muss. Der entsprechende Graph wird in Abbildung~\ref{fig:pfadgraph_pn} dargestellt. 
+
+%\lstinputlisting[language=C, firstline=1, lastline=5, caption={Aufbau einer Testinstanz anhand von $P_{64}$}, 
+%frame=none, %resetmargins=true, 
+%linewidth=1.0\linewidth]{./Data/P64.csv}
+\begin{lstlisting}[
+    language={}, 
+    frame=none,
+    caption={Beschreibung einer Instanz anhand von \texttt{P64.csv} (Ausschnitt)}, 
+    label={lst:p64_aufbau}
+]
+P64
+64 63 1 0
+1 2
+2 3
+3 4
+\end{lstlisting}
+%\input{Chap04_fig_pfadgraph}
+Wäre der Graph gewichtet, so müssten für jede Kante drei durch Leerzeichen getrennte Einträge angegeben werden: die beiden Endknoten und das jeweilige Kantengewicht. Auf eine separate Darstellung des gewichteten Dateiformats wird verzichtet. 
+
+%%%%%%%%%%%%%%%%%
+% Ausführung
+%%%%%%%%%%%%%%%%%
+\subsection{Ausführung des Programms}
+Das Programm kann auf zwei Arten ausgeführt werden: Es kann entweder direkt oder über ein mitgeliefertes Bash-Skript aufgerufen werden. In beiden Fällen können optionale Parameter übergeben werden, um eine selektive Ausführung zu starten. 
+
+Beispielhaft wird die Testinstanz \texttt{P64.csv} auf eine Brennsequenz der Länge 8 untersucht: 
+
+\texttt{./CBAG P64.csv 8} 
+
+Die Berechnungen werden für alle Graphen in Tabelle~\ref{tab:Chap04_tab_benchmarks} 20-mal wiederholt. 
+Da eine mehrfache Berechnung der insgesamt 200 stochastischen Graphen zu einer Verlängerung der Gesamtlaufzeit führt, werden diese Instanzen nur einmal berechnet. 
+Falls eine Wiederholung dennoch gewünscht ist, muss \texttt{REPEAT=1} in Zeile 128 von \texttt{run.sh} auskommentiert werden.
+%%%%%%%%%%%%%%%%%
+% Optionale Parameter
+%%%%%%%%%%%%%%%%%
+\subsubsection{Optionale Parameter}
+Um eine gezielte Auswahl von Zentralitätsmaßen und/oder Penalty-Funktionen zu treffen sowie den Umfang der Log-Ausgabe zu steuern, können Parameter \texttt{-c}, \texttt{-p}, \texttt{-r} und \texttt{-v} übergeben werden. 
+
+\texttt{./run.sh -p SQRT QUADRATIC -c DEGREE CLOSENESS -v 65 -r 10}
+
+Die nachfolgende Tabelle \ref{tab:options-c} listet alle implementierten Zentralitätsmaße auf, die als optionale Parameter mit \texttt{-c} beliebig kombiniert übergeben werden können. Das Weglassen von \texttt{-c} führt zur Benutzung aller aufgeführten Zentralitätsmaße.
+%\input{Chap04_tab_c_option}
+
+In der Tabelle bezeichnet $\mathdutch{u}=\{v_1, \ldots, v_{k}\}$ die Menge der unverbrannten Knoten, wobei $k$ deren Anzahl zum Zeitpunkt der Bewertung angibt, und $d_i$ den kürzesten erreichbaren Abstand des Knotens $v_i \in \mathdutch{u}$ zur aktiven Feuerfront. 
+Alle %sonstigen 
+Penalty-Funktionen $p$ haben die Gestalt 
+\begin{equation}
+%\begin{split}
+p \colon \mathbb N_{0}^{|\mathdutch{u}|} \to \mathbb R_{\geq 0}, \quad \mathdutch{u} \mapsto \begin{cases} 
+\xi \displaystyle\sum_{v_i \in \mathdutch{u}} d_i^j \text{ laut Tabelle \ref{tab:Chap04_tab_p_option}, } & \text{falls } |\mathdutch{u}| < \texttt{threshold} \\
+c\xi \,|\mathdutch{u}|,  & \text{falls } |\mathdutch{u}| \geq \texttt{threshold}.
+\end{cases}
+%\end{split}
+\label{eq:penalty}
+\end{equation}
+Die Konstante $c$ entspricht dabei dem Wert \texttt{INF} im Programm und wird in Abhängigkeit von $j$ und \texttt{threshold} mindestens so hoch gewählt wie die Summe der ersten $|\mathdutch{u}|$ natürlichen Zahlen in der $j$-ten Potenz 
+\begin{equation}
+\sum_{1 \leq i \leq |\mathdutch{u}|} i^j 
+\end{equation}
+ausgewertet für $|\mathdutch{u}| = \texttt{threshold}$. 
+Diese Summe kann mit einer geschlossenen Formel (siehe~\cite{wolfram}) berechnet werden. 
+Diese Wahl soll eine konsistente Penalty-Funktion sicherstellen. Eine Penalty-Funktion muss hierbei nicht notwendigerweise stetig sein; sie muss lediglich schlechtere Chromosomen stärker bestrafen. Mit der Definition (\ref{eq:penalty}) können auch weit von einer zulässigen Lösung entfernte Chromosomen sinnvoll gegeneinander bewertet werden. 
+
+%%%%%%%%%%%%%%%%%
+% Programmstruktur
+%%%%%%%%%%%%%%%%%
+\subsection{Klassenstruktur des Programms}
+%%%%%%%%%%%%%%%%%
+% main.cpp
+%%%%%%%%%%%%%%%%%
+%\subsubsection{Makefile und main.cpp}
+C++ ist eine Programmiersprache, die kompiliert werden muss. 
+Dies erfolgt über \texttt{Makefile} (siehe Listing~\ref{lst:Makefile} im Anhang). 
+Die Erstellung dieser Datei erfolgte mithilfe von \url{google.ai}. 
+Die Kompilierung muss nach jeder Programmänderung mit \texttt{make} angestoßen werden.  
+
+%%%%%%%%%%%%%%%%%
+% CentralityComputer.cpp
+%%%%%%%%%%%%%%%%%
+\subsubsection{CentralityComputer}
+Die Klasse \texttt{CentralityComputer} (siehe Listings~\ref{lst:CentralityComputer.cpp} und \ref{lst:CentralityComputer.hpp} im Anhang) berechnet die Zentralitätswerte für jeden Knoten $v \in V$ und skaliert diese auf das Intervall [0,\,1], damit Knoten aus verschiedenen Zusammenhangskomponenten vergleichbar oft ausgewählt werden. %Zusätzlich wendet sie eine Sigmoidfunktion auf die berechneten Rohwerte an. 
+Die Klasse operiert mit einem Pointer, der auf das \texttt{GraphAnalyzer}-Objekt zeigt. 
+%Dabei wird lediglich dessen Speicheradresse im RAM übergeben.
+
+Für die Bestimmung der Zentralitätswerte wird auf NetworKit zurückgegriffen. 
+Die Auswahl der implementierten Zentralitätsmaße (siehe Tabelle~\ref{tab:options-c}) richtet sich nach den folgenden Kriterien: 
+
+\begin{itemize}
+\item \texttt{BETWEENNESS}, \texttt{DEGREE}, \texttt{CLOSENESS} und \texttt{EIGENVECTOR} zählen zu den häufigsten Zentralitätsmaßen in der Literatur \cite{Gau22, NAZERI2023, Ko05} sowie \cite[Kap. 7]{New18} und \cite[Kap. 6]{J03}.
+\item \texttt{BETWEENNESS} und \texttt{EIGENVECTOR} werden in vergleichbaren Studien \cite{Gau22, NAZERI2023} als zentrale Maße eingesetzt.
+\item Die Zentralitätsmaße \texttt{PAGERANK}, \texttt{EIGENVECTOR} und \texttt{KATZ} sind eng verwandt. 
+\item \texttt{CLOSENESS} und \texttt{HARMONIC} sind eng verwandt. 
+\item \texttt{KADABRA} und \texttt{BETWEENNESS} sind eng verwandt. 
+\item \texttt{DEGREE} lässt sich in puncto Rechenaufwand am günstigsten bestimmen. 
+\end{itemize}
+
+Dabei wird von den verwandten Zentralitätsmaßen eine vergleichbare Leistung erwartet. 
+Als Kontrollmaß dafür, ob die Zentralität überhaupt einen Effekt auf den genetischen Algorithmus hat, wird \texttt{RANDOM} verwendet. Dabei werden allen Knoten $v \in V$ gleichverteilte Zufallswerte aus dem Intervall [0,~1] zugewiesen. 
+
+Die Verwendung der NetworKit-Bibliothek bietet zudem den Vorteil, dass zusätzliche Zentralitätsmaße einfach implementiert werden können. 
+Exemplarisch soll das Katz-Zentralitätsmaß in das Programm integriert werden.   
+Dafür müssen lediglich 
+
+{\small{\texttt{\#include <networkit/centrality/KatzCentrality.hpp>}}}
+ 
+und der entspechende Codeblock (siehe Listing~\ref{lst:computeCentralityScores}) in die Methode \texttt{computeCentralityScores} eingefügt werden. Zudem muss die neue Abkürzung an je zwei Stellen in den Dateien \texttt{main.cpp} und \texttt{CentralityComputer.hpp} in den Listen der erlaubten Werte ergänzt werden. Die optionale Skalierung der Werte mit einem konstanten Faktor kann dazu beitragen, eine Division durch sehr kleine Werte zu vermeiden. 
+
+%\input{Chap04_lst_computeCentralityScores}
+
+Im Anschluss wird die Zentralität $c_i$ jedes Knotens $v_i \in V$ durch das Maximum $\max_{v_j \in Z(v_i)} c_j$ seiner Zusammenhangskomponente $Z(v_i)$ geteilt. 
+In den trivialen Fällen $Z(v) = \{v\}$ oder $Z(v) = \{v, u\}$ wird allen Knoten aus $Z(v)$ eine normierte Zentralität von 1 zugewiesen. 
+%Dies trägt dazu bei, dass die Chromosomen Brandherde aus allen Zusammenhangskomponenten enthalten. 
+
+Eine weitere wichtige Funktion der Klasse \texttt{CentralityComputer} ist das Bereitstellen eines statischen Zufallszahlengenerators des Typs \texttt{mt19937\_64} \cite{mt19937}, der hier bei der \texttt{RANDOM}-Strategie und in der Klasse \texttt{GA} zum Einsatz kommt. 
+Im Gegensatz zur Lösung von Nazeri et al. \cite{NAZERI2023} wird nur ein 64"=Bit"=Zufallszahlengenerator erzeugt, der je nach Bedarf ganzzahlige oder reellwertige Zufallszahlen in dem gewünschten Intervall liefern kann.  
+
+%%%%%%%%%%%%%%%%%
+% Parametrisierung des GA
+%%%%%%%%%%%%%%%%%
+\subsection{Parametrisierung des genetischen Algorithmus}\label{cap:aga_param}
+Der vorliegende Algorithmus kann im Unterschied zur Lösung von Nazeri et al. \cite{NAZERI2023} verschiedene Zentralitätsmaßen einsetzen. Dazu zählen \texttt{BETWEENNESS}, \texttt{CLOSENESS}, \texttt{DEGREE}, \texttt{EIGENVECTOR}, \texttt{HARMONIC}, \texttt{KADABRA}, \texttt{KATZ}, \texttt{PAGERANK} sowie \texttt{RANDOM}. 
+Jedes dieser Zentralitätsmaße kann beliebig mit den implementierten Penalty-Funktionen kombiniert werden.  
+Mit der Einführung eines neuen Parameters \texttt{scale} kann die erkennbare Verlangsamung des Programms infolge sehr hoher Werte von \texttt{INF} entschärft werden.  
+

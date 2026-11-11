@@ -1,0 +1,179 @@
+%%%%%%%%%%%%%%%%%
+% Penalty-Verfahren
+%%%%%%%%%%%%%%%%%
+\section{Theoretische Grundlagen}\label{cap:theo}
+\subsection{Graph-Burning-Problem}
+\begin{Definition}[{Graph-Burning-Problem \cite[2]{Ashok25}}]
+Es sei ein einfacher, ungerichteter Graph $G = (V, E)$ gegeben. 
+%Das Graph-Burning-Problem ist wie folgt definiert: 
+Der Ausbreitungsprozess läuft in diskreten Zeitschritten (Runden) ab: 
+\begin{itemize}
+\item Zu Beginn sind alle Knoten $v \in V$ unverbrannt und noch nicht brennend. 
+\item In jeder Runde $i \geq 1$ wird ein noch unverbrannter Knoten entzündet. Dieser Knoten brennt in Runde $i$ und gilt ab der nächsten Runde $i+1$ als verbrannt. 
+\item Jeder in $i$ brennende Knoten entzündet seine noch unverbrannten Nachbarn, die in $i+1$ brennen. 
+\item Ist ein Knoten einmal verbrannt, so bleibt er bis zum Abschluss des Brennprozesses verbrannt. 
+\item Der Prozess endet, wenn alle Knoten $v \in V$ verbrannt sind.
+\end{itemize}
+Die in jeder Runde entzündeten Knoten bilden dabei eine Folge, die als Brennsequenz bezeichnet wird. 
+\end{Definition}
+\begin{Definition}[{$i$-Nachbarschaft von $v$ \cite[2]{Ashok25}}]
+Für $v \in V$ und ein $i \in \mathbb{N}_0$ bezeichnet $N_i(v)$ die Menge aller Knoten innerhalb des Abstands $i$ von $v$ einschließlich des Knotens $v$ selbst. 
+\end{Definition}
+Sei $(b_1, b_2, \ldots, b_k)$ eine Brennsequenz von $G$. Dann gilt gemäß \cite[2]{Ashok25}: 
+\begin{equation}
+\bigcup\limits_{1\leq i \leq k} N_{k-i}(b_i) = V.
+\end{equation}  
+\begin{Definition}[{Brennzahl \cite[2]{Ashok25}}]
+Die Brennzahl $b(G)$ des Graphen $G$ entspricht der minimal erforderlichen Anzahl von diskreten Zeitschritten bis zum Prozessende. 
+\end{Definition}
+
+Obwohl die Vermutung bis heute nicht abschließend bewiesen ist, zeigten Bonato und Kamali \cite{BK21}, dass für die Brennzahl eines zusammenhängenden Graphen mit $n$ Knoten 
+\begin{equation}
+b(G) \leq \left\lceil \frac{\sqrt{12n +64}}{3} + \frac{8}{3} \right\rceil = \sqrt{\frac{4n}{3}} + O(1)
+\end{equation}
+gilt. Der Ausdruck auf der rechten Seite ergibt sich durch die asymptotische Betrachtung für $n \to \infty$. Hierbei wird die Konstante 64 unter der Wurzel vernachlässigt, während der Fehler der Aufrundung sowie die Konstante 8/3 in $O(1)$ zusammengefasst werden. 
+ 
+Ein Literaturüberblick findet sich unter anderem in \cite{Bo21, cmsgd}. Darüber hinaus liefert Kapitel~2 in \cite{Per24} eine aktuelle Zusammenfassung der exakten Algorithmen und Heuristiken für Netzwerke mit bis zu 14000 Knoten.  
+
+Exakte Algorithmen sind für Anwendungen, die sehr schnelle Lösungen erfordern oder sehr große Probleminstanzen betreffen, oft unpraktikabel. Obwohl Approximationsalgorithmen keine Optimalität garantieren, können sie gute Lösungen generieren, die nahe an der optimalen Lösung liegen. Für viele Anwendungen ist das ausreichend, da die zugrunde liegenden Daten oft ohnehin ungenau sind \cite[Kap.~4.6.1, R2]{Gutin2018}.
+
+% Mathematische Formulierungen
+\subsubsection{Formulierung als ein ganzzahliges lineares Programm}
+Mathematische Formulierungen des GBP, etwa als ein ganzzahliges lineares Programm \cite[ILP]{matform22} oder als Constraint-Satisfaction-Probleme \cite[CSP1, CSP2]{matform22}, können mithilfe von Standard-Optimierungssoftware gelöst werden. Da das GBP in seiner Optimierungsversion NP-schwer ist, kann das Lösen dieser Formulierungen für größere Netzwerke exponentielle Laufzeiten beanspruchen \cite[2]{matform22}. 
+
+Nachfolgend wird das ganzzahlige lineare Programm ILP-PROP \cite[3-4]{Garcia25} präsentiert, welches auf dem Ausbreitungsprozess basiert. 
+Dieses Modell kann als besonders intuitiv bezeichnet werden und dient hier primär als eine formale Problemdefinition. 
+
+\begin{align} \min \quad & \sum_{j \in [1, U]} x_{j}+ 1, \label{obj:ILP-PROP} \\ \text{so dass} \quad & x_{j} \geq 1 - b_{i,j} \qquad \forall v_i \in V, ~ j = 1,2,\ldots,U \label{res:ILP-PROP-xj}\\ & b_{i,j} \leq s_{i,j} + \sum_{v_l \in N(v_i)} b_{l,j-1} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bij} \\ & \sum_{v_i \in V} s_{i,j} = 1 \qquad j=1,2,\ldots,U \label{res:ILP-PROP-sij}\\ 
+& s_{i,j}, ~ b_{i,j}, ~ x_{j} \in \{0, 1\} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bin}\\ & b_{i,0} = 0 \qquad \forall v_i \in V \label{res:ILP-PROP-bi0}
+\end{align}
+
+In diesem Modell ist $G = (V, E)$ der Eingabegraph mit $n = |V|$ Knoten, $m = |E|$ Kanten sowie der Knotenmenge $V = \{v_1, \ldots, v_n\}$. 
+Es besitzt $2Un + U$ binäre Entscheidungsvariablen und $2Un + U$ Nebenbedingungen, wobei $U \geq b(G)$ eine obere Schranke für $b(G)$ darstellt \cite[3]{Garcia25}. 
+
+% Genetische Algorithmen
+\subsection{Genetische Algorithmen} 
+Genetische Algorithmen sind von der natürlichen Selektion inspirierte stochastische, populationsbasierte Metaheuristiken, die zur allgemeineren Klasse der Evolutionären Algorithmen gehören. 
+Im Unterschied zu den meisten anderen Metaheuristiken basieren Genetische Algorithmen auf drei Kernkonzepten \cite[245f.]{Whitley19}: 
+\begin{itemize}
+    \item die Verwendung einer Population von Lösungskandidaten zur Suchsteuerung, 
+    \item den Einsatz von Crossover-Operatoren, welche zwei oder mehr Lösungen rekombinieren, um neue und potenziell bessere Individuen zu generieren, 
+    \item das Management der Diversität innerhalb der Population, um die Exploration des Suchraums aufrechtzuerhalten.
+\end{itemize}
+Genetische Algorithmen erfordern, dass der natürliche Parametersatz des Optimierungsproblems als eine endliche Zeichenkette über einem endlichen Alphabet kodiert wird \cite[7]{G89}. 
+Im Kontext dieser Arbeit entspricht dies der Darstellung einer potenziellen Lösung als Brennsequenz in Form eines Vektors der gewünschten Länge. Die Elemente dieses Vektors bestehen aus Knotennummern. 
+
+Das Beispiel von Goldberg \cite[11]{G89} (siehe Abbildung~\ref{fig:RWS}) verdeutlich das Prinzip der Roulette-Wheel-Selektion. 
+Den vier verfügbaren Kandidaten werden Wahrscheinlichkeiten zugeordnet. 
+Der ''beste'' Kandidat hat eine Wahrscheinlichkeit von 49.2\% gezogen zu werden, während der ''schwächste'' Kandidat nur mit einer Wahrscheinlichkeit von 5.5\% ausgewählt wird. 
+\begin{table}[htb]
+    \centering
+    \small
+    \begin{tabular}{rrrr}
+        \hline
+        Nr. & Kodierung & Fitness & \% \\
+        \hline
+        1 & 01101 & 169 & 14.4 \\
+        2 & 11000 & 576 & 49.2 \\
+        3 & 01000 & 64 & 5.5 \\
+        4 & 10011 & 361 & 30.9 \\
+        \hline
+        Summe & & 1170 & 100.0 \\
+        \hline
+    \end{tabular}
+\caption[Beispielhafte Fitnesswerte für Roulette-Wheel-Selektion]{Beispielhafte Fitnesswerte für Roulette-Wheel-Selektion \cite[11]{G89}}
+\end{table}
+
+Der Algorithmus bricht ab, wenn entweder eine Brennsequenz $(b_1, \ldots, b_k)$ gefunden wird, die mit $k$ Brandherden den Graphen $G$ vollständig verbrennt, oder wenn eine maximale Anzahl an Generationen im genetischen Algorithmus erreicht wird. 
+
+Die Gesamtpopulation des implementierten genetischen Algorithmus besteht aus drei Teilen, die wie folgt aufgebaut sind:
+\begin{table}[htb]
+    \centering
+    \small
+    \begin{tabular}{lrr}
+        \hline
+        Populationsteil & Anzahl der Individuen & \% \\
+        \hline
+        Eliten & 60 & 10.0 \\
+        Crossover & 450 & 75.0 \\
+        Immigranten & 90 & 15.0 \\
+        \hline
+        Summe & 600 & 100.0 \\
+        \hline
+    \end{tabular}
+\caption{Zusammensetzung der Gesamtpopulation des genetischen Algorithmus}
+\end{table}
+
+\subsection{Normalverteilung}
+Die Normalverteilung ist eine zweiparametrige stetige Wahrscheinlichkeitsverteilung über der Menge der reellen Zahlen. Die Normalverteilung kann viele praktische Sachverhalte sehr gut approximieren. Dem zentralen Grenzwertsatz zufolge strebt die Summe von $\mathdutch{n}$ unabhängigen identisch verteilten Zufallsvariablen mit endlicher Varianz, unter schwachen Annahmen, mit $\mathdutch{n}\to\infty$ gegen eine Normalverteilung, unabhängig von der ursprünglichen Verteilung. Infolge dessen kann man Zufallsvariablen als annähernd normalverteilt ansehen, wenn sie durch Überlagerung von vielen unabhängigen kleinen Einflüssen entstehen \cite[309-310]{hen18}. 
+
+\begin{Definition}[Normalverteilung]
+Die Normalverteilung mit den Parametern $\mu \in \mathbb{R}$ und $0 < \sigma^2 < \infty$ hat für alle $x \in \mathbb{R}$ die Wahrscheinlichkeitsdichte
+\begin{align}
+	f(x) = \frac {1}{\sigma\sqrt{2\pi}} e^{-\frac {1}{2} \left(\frac{x-\mu}{\sigma}\right)^2}.
+\end{align}		
+Die \cdf der Normalverteilung ist durch
+\begin{align}
+	F(x) = \frac{1}{\sigma\sqrt{2\pi}} \int_{-\infty}^x e^{-\frac{1}{2} \left(\frac{t-\mu}{\sigma}\right)^2} \mathrm dt
+\end{align}
+gegeben. 
+Eine Normalverteilung mit den Parametern $\mu = 0$ und $\sigma^2 = 1$ heißt Standardnormalverteilung. 
+\end{Definition}
+Zur Abkürzung wird oft $X \sim \mathcal N\left(\mu, \sigma^2\right)$ geschrieben. $\mu$ entspricht dabei dem Erwartungswert und $\sigma^2$ der Varianz der Zufallsgröße $X$.
+
+Jede beliebige Normalverteilung kann standardisiert werden. Es sei $X \sim \mathcal N (\mu, \sigma^2)$. Die Transformation $Z = \frac{X - \mu}{\sigma}$ führt zu $Z \sim \mathcal N (0, 1)$. Die Rücktransformation der Ergebnisse mit $x = \mu + \sigma z$ ermöglicht die Berechnungen für beliebige Normalverteilungen \cite[309-310]{hen18}:  
+\begin{align}
+	\Phi(z) = \frac{1}{\sqrt{2\pi}} \int\limits_{-\infty}^{z} e^{-\frac{1}{2} t^2} \mathrm dt = \frac{1}{\sqrt{2\pi}} \int\limits_{-\infty}^{(x-\mu)/\sigma} e^{-\frac{1}{2} t^2} \mathrm dt = \Phi \left(\frac{x-\mu}{\sigma}\right).
+\end{align}
+Obwohl keine elementare Stammfunktion der \pdf der Normalverteilung existiert, sind die Quantile der Standardnormalverteilung $\mathcal N (0,1)$ tabelliert \cite[Section 1.3.6.7.1]{nist}. Computer-Algebra-Systeme beherrschen nicht nur diese tabellierten Quantile, sondern auch zahlreiche effiziente Algorithmen zur Bestimmung von numerischen Näherungswerten, um den gesuchten Wert mit Hilfe von schnell berechenbaren Approximationen zu ermitteln \cite[931-933]{as72}. 
+
+Die \cdf der Standardnormalverteilung kann auf die (Gaußsche) Fehlerfunktion zurückgeführt werden \cite[298, 7.1.22]{as72}:  
+\begin{align}
+	P(Z \leq z) &= \Phi (z) = \frac{1}{2} \left[ 1+ \erf \left( \frac{z}{\sqrt{2}} \right) \right]. 
+\end{align}
+
+Die Normalverteilung ist reproduktiv. 
+Die Summe von zwei unabhängigen normalverteilten Zufallsgrößen $X \sim \mathcal N(\mu_X,\sigma_X^2)$ und $Y \sim \mathcal N(\mu_Y,\sigma_Y^2)$ ist normalverteilt \cite[332-333]{hen18}:  
+\begin{align}
+X+Y \sim \mathcal N(\mu_X+\mu_Y,\sigma_X^2+\sigma_Y^2).
+\end{align} 
+
+Die unendliche Teilbarkeit beschreibt die Eigenschaft vieler Zufallsvariablen, sich als Summe von einzelnen unabhängigen und identisch verteilten Zufallsvariablen darstellen zu lassen. 
+Diese Eigenschaft basiert darauf, dass die charakteristische Funktion der Summe von solchen Zufallsvariablen dem Produkt der einzelnen charakteristischen Funktionen entspricht \cite[208]{GrSt01}.
+
+Für eine skalare Zufallsvariable $X$ ist die charakteristische Funktion $\varphi_X \colon \mathbb{R} \to \mathbb{C}$ definiert als 
+\begin{align}
+\varphi_X(t) = \E{\mathrm{e}^{\mathdutch{i}tX}} = \int_{\mathbb{R}} \mathrm{e}^{\mathdutch{i}tx} \mathrm{d} F_X(x) = \int_{\mathbb{R}} \mathrm{e}^{\mathdutch{i}tx} f_X(x) \mathrm{d} x,
+\end{align} 
+wobei $\mathdutch{i}$ die imaginäre Einheit mit $\mathdutch{i}^2 = -1$ und $t \in \mathbb{R}$ das Argument der charakteristischen Funktion ist. 
+Hierbei ist $F_X$ die \cdf von $X$, $f_X$ die entsprechende \pdf und die Integrale sind Riemann-Stieltjes-Integrale \cite[182-183]{GrSt01}. 
+
+Für $X \sim \mathcal{N}(0,1)$ gilt somit:
+\begin{align}
+\label{eq: charfun}
+\varphi_X(t) = \E{\mathrm{e}^{\mathdutch{i}tX}} = \int_{\mathbb{R}} \frac{1}{\sqrt{2\pi}} \mathrm{e}^{\left(\mathdutch{i}tx - \frac{1}{2} x^2\right)} \mathrm{d} x.
+\end{align}  
+Das Integral ist nicht trivial. Zunächst sei angemerkt, dass durch quadratische Ergänzung gilt: 
+\begin{align}
+\mathdutch{i}tx - \frac{1}{2} x^2 = -\frac{1}{2} \left(x^2 - 2\mathdutch{i}tx\right) = - \frac{1}{2} \left(x^2  - 2\mathdutch{i}tx + (\mathdutch{i}t)^2 - (\mathdutch{i}t)^2\right) = - \frac{1}{2} \left((x - \mathdutch{i}t)^2 + t^2\right).
+\end{align}
+Einsetzen in (\ref{eq: charfun}) und Herausziehen der von $x$ unabhängigen Terme ergibt: 
+\begin{align}
+\varphi_X(t) &= \frac{1}{\sqrt{2\pi}} \mathrm{e}^{- \frac{1}{2} t^2} \int_{-\infty}^\infty  \mathrm{e}^{- \frac{1}{2} \left(x - \mathdutch{i}t\right)^2} \mathrm{d} x = \frac{1}{\sqrt{2\pi}} \mathrm{e}^{- \frac{1}{2} t^2} \int_{-\infty}^\infty \mathrm{e}^{- \frac{1}{2} u^2} \mathrm{d} u = \frac{1}{\sqrt{2\pi}} \mathrm{e}^{- \frac{1}{2} t^2} \sqrt{2\pi} \nonumber\\
+&= \mathrm{e}^{- \frac{1}{2} t^2}.
+\end{align} 
+Schließlich kann durch eine Pfadverschiebung in der komplexen Ebene $u = x - \mathdutch{i}t$ gesetzt werden, um ein spezielles Gauß-Integral zu erhalten. Dies ist möglich, da die komplexe Funktion $g(u) = \mathrm{e}^{- \frac{1}{2} u^2}$ eine ganze Funktion ist. Für solche Funktionen verschwindet das Ringintegral über einem geschlossenen Pfad nach dem Cauchyschen Integralsatz. Zusätzlich wird das schnelle Abklingen im Unendlichen genutzt, um die vertikalen Abschnitte des Integrationsweges zu vernachlässigen.
+
+Für $Y \sim \mathcal{N}(\mu, \sigma^2)$, d.h. $Y = \mu + \sigma X$ mit $X \sim \mathcal{N}(0, 1)$, gilt \cite[183]{GrSt01}:
+\begin{align}
+%\label{eq: charfun}
+\varphi_Y(t) = \E{\mathrm{e}^{\mathdutch{i}t(\mu + \sigma X)}} = \mathrm{e}^{\mathdutch{i}t\mu} \varphi_X(\sigma t) = \mathrm{e}^{\mathdutch{i}t\mu - \frac{1}{2} \sigma^2 t^2}.
+\end{align} 
+
+Seien nun $Y_1$, $Y_2 \sim \mathcal{N}(\frac{1}{2}\mu, \frac{1}{2}\sigma^2)$ unabhängig. Dann kann für $Y$ die Zerlegung in $Y_1$ und $Y_2$ gezeigt werden \cite[183]{GrSt01}:
+\begin{align}
+%\label{eq: charfun}
+\varphi_{Y}(t) &= \E{\mathrm{e}^{\mathdutch{i}t(\mu + \sigma X)}} = \mathrm{e}^{\mathdutch{i}t \mu} \varphi_X \left(\sigma t \right) = \mathrm{e}^{\mathdutch{i}t \left(\frac{1}{2}\mu + \frac{1}{2}\mu \right) - \frac{1}{2} \left( \frac{1}{2}\sigma^2 + \frac{1}{2}\sigma^2 \right) t^2} \nonumber\\
+&= \mathrm{e}^{\mathdutch{i}t\frac{1}{2}\mu - \frac{1}{4}\sigma^2 t^2} \mathrm{e}^{\mathdutch{i}t\frac{1}{2}\mu - \frac{1}{4}\sigma^2 t^2} = \varphi_{Y_1}(t) \, \varphi_{Y_2}(t).
+\end{align} 
+Aus diesem Grund kann eine normalverteilte Zufallsgröße $Y$ im Allgemeinen als Summe von $\mathdutch{n}$ unabhängigen identisch normalverteilten Zufallsgrößen $Y_1, \ldots, Y_\mathdutch{n}$ für ein beliebig großes $\mathdutch{n} \in \mathbb{N}$ dargestellt werden.
