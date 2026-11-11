@@ -29,40 +29,40 @@ double *new_array(int len)
     return a;
 }
 
-void check_sweep(int Nx, int Ny, int B)
-{
-    int L = Nx + 2;
-    double h = 1.0 / (Nx + 1);
-    double *U = new_array((Nx + 2) * (Ny + 2));
-    double *V = new_array((Nx + 2) * (Ny + 2));
+// void check_sweep(int Nx, int Ny, int B)
+// {
+//     int L = Nx + 2;
+//     double h = 1.0 / (Nx + 1);
+//     double *U = new_array((Nx + 2) * (Ny + 2));
+//     double *V = new_array((Nx + 2) * (Ny + 2));
 
-    for (int j = 0; j <= Ny + 1; j++)
-        for (int i = 0; i <= Nx + 1; i++) {
-            double x = i * h, y = j * h;
-            U[j * L + i] = x * x + y * y;
-        }
+//     for (int j = 0; j <= Ny + 1; j++)
+//         for (int i = 0; i <= Nx + 1; i++) {
+//             double x = i * h, y = j * h;
+//             U[j * L + i] = x * x + y * y;
+//         }
 
-    if (B > 0)
-        jacobi_sweep_blocked(Nx, Ny, B, U, V);
-    else
-        jacobi_sweep(Nx, Ny, U, V);
+//     if (B > 0)
+//         jacobi_sweep_blocked(Nx, Ny, B, U, V);
+//     else
+//         jacobi_sweep(Nx, Ny, U, V);
 
-    double err = 0.0;
-    for (int j = 1; j <= Ny; j++)
-        for (int i = 1; i <= Nx; i++) {
-            double d = V[j * L + i] - U[j * L + i] - h * h;
-            if (d < 0) d = -d;
-            if (d > err) err = d;
-        }
+//     double err = 0.0;
+//     for (int j = 1; j <= Ny; j++)
+//         for (int i = 1; i <= Nx; i++) {
+//             double d = V[j * L + i] - U[j * L + i] - h * h;
+//             if (d < 0) d = -d;
+//             if (d > err) err = d;
+//         }
 
-    if (B > 0)  printf("  blocked (B = %d): ", B);
-    else        printf("  without blocking: ");
+//     if (B > 0)  printf("  blocked (B = %d): ", B);
+//     else        printf("  without blocking: ");
     
-    if (err / (h * h) < 1e-6)   printf("max |V - U - h^2| / h^2 = %.1e  OK\n", err / (h * h));
-    else                        printf("max |V - U - h^2| / h^2 = %.1e  WRONG\n", err / (h * h));
+//     if (err / (h * h) < 1e-6)   printf("max |V - U - h^2| / h^2 = %.1e  OK\n", err / (h * h));
+//     else                        printf("max |V - U - h^2| / h^2 = %.1e  WRONG\n", err / (h * h));
 
-    free(U); free(V);
-}
+//     free(U); free(V);
+// }
 
 double measure_bandwidth(int n)
 {
@@ -87,32 +87,32 @@ double measure_bandwidth(int n)
     return 32.0 * n / tmin * 1e-9;
 }
 
-void measure_performance(int Nx, int Ny, int B)
-{
-    double n = (double) Nx * Ny;
-    double *U = new_array((Nx + 2) * (Ny + 2));
-    double *V = new_array((Nx + 2) * (Ny + 2));
-    for (int k = 0; k < (Nx + 2) * (Ny + 2); k++) U[k] = 1.0;
+// void measure_performance(int Nx, int Ny, int B)
+// {
+//     double n = (double) Nx * Ny;
+//     double *U = new_array((Nx + 2) * (Ny + 2));
+//     double *V = new_array((Nx + 2) * (Ny + 2));
+//     for (int k = 0; k < (Nx + 2) * (Ny + 2); k++) U[k] = 1.0;
 
-    double tmin = 1e30, tmin_b = 1e30;
-    for (int r = 0; r < 5; r++) {
-        double t0 = wtime();
-        jacobi_sweep(Nx, Ny, U, V);
-        double t = wtime() - t0;
-        if (t < tmin) tmin = t;
+//     double tmin = 1e30, tmin_b = 1e30;
+//     for (int r = 0; r < 5; r++) {
+//         double t0 = wtime();
+//         jacobi_sweep(Nx, Ny, U, V);
+//         double t = wtime() - t0;
+//         if (t < tmin) tmin = t;
 
-        if (B > 0) {
-            t0 = wtime();
-            jacobi_sweep_blocked(Nx, Ny, B, U, V);
-            t = wtime() - t0;
-            if (t < tmin_b) tmin_b = t;
-        }
-    }
-    printf("%8d %8d   %12.1f", Nx, Ny, n / tmin * 1e-6);
-    if (B > 0) printf("   %12.1f", n / tmin_b * 1e-6);
-    printf("\n");
-    free(U); free(V);
-}
+//         if (B > 0) {
+//             t0 = wtime();
+//             jacobi_sweep_blocked(Nx, Ny, B, U, V);
+//             t = wtime() - t0;
+//             if (t < tmin_b) tmin_b = t;
+//         }
+//     }
+//     printf("%8d %8d   %12.1f", Nx, Ny, n / tmin * 1e-6);
+//     if (B > 0) printf("   %12.1f", n / tmin_b * 1e-6);
+//     printf("\n");
+//     free(U); free(V);
+// }
 
 /* ========================================================================= */
 /* ERWEITERUNGEN FÜR DIE NEUEN ANFORDERNUNGEN (k-Sweeps & Stencils)          */
@@ -269,7 +269,7 @@ void print_performance_table_gpu(const Stencil *S, int k_sweeps)
 {
     printf("\nPerformance for %s on GPU (%d sweeps, million updates per second):\n",
            S->name, k_sweeps);
-    printf("%8s %8s   %12s\n", "Nx", "Ny", "GPU Kernel");
+    printf("%8s %8s   %12s   %12s\n", "Nx", "Ny", "GPU Kernel (pure)", "GPU Kernel (transfer)");
 
     for (int e = 8; e <= 21; e++) {          // Nx = 2^8, ..., 2^21
         int Nx = 1 << e;
@@ -290,10 +290,11 @@ void print_performance_table_gpu(const Stencil *S, int k_sweeps)
         // Um exakt dasselbe zu messen wie bei der CPU (Zeit pro einzelnem Sweep):
         // teilen wir die gemessene reine Rechenzeit (t_sweeps) durch k_sweeps.
         double t_per_sweep = times.t_sweeps / k_sweeps;
+        double total_per_sweep = (times.t_to_gpu + times.t_sweeps + times.t_to_cpu) / k_sweeps;
 
         // Ausgabe im exakt selben Tabellenformat (Updates pro Sekunde)
-        printf("%8d %8d   %12.1f\n", Nx, Ny, n / t_per_sweep * 1e-6);
-
+        printf("%8d %8d   %12.1f   %12.1f\n", Nx, Ny, n / t_per_sweep * 1e-6, n / total_per_sweep * 1e-6);
+    
         free(U);
     }
 }
@@ -331,8 +332,8 @@ int main(int argc, char **argv)
     int k_sweeps = 50;          // sweeps per measurement in the tables
     int maxIter = 1000;
     int check_every = 100;        // residual only every 10 sweeps (costs a sweep)
-    int Nx = 256; //2048;
-    int Ny = 256; //2048;
+    int Nx = 512; //2048;
+    int Ny = 512; //2048;
     double epsilon = 1e-4;
     int len = (Nx + 2) * (Ny + 2);
     double *U = new_array(len);
@@ -369,7 +370,7 @@ int main(int argc, char **argv)
 
     // 3. performance tables (uncomment if needed, they take a while)
     for (int s = 0; s < 3; s++)
-    //    print_performance_table_cpu(stencils[s], k_sweeps, B);
+        print_performance_table_cpu(stencils[s], k_sweeps, B);
     (void) k_sweeps;
 
     // 4. Jacobi solver for all three stencils, same initial values
@@ -412,7 +413,27 @@ int main(int argc, char **argv)
         memcpy(U, U_master, len * sizeof(double)); 
         
         // Aufruf deiner portierten GPU-Methode
-print_performance_table_gpu(stencils[s], k_sweeps);
+        print_performance_table_gpu(stencils[s], k_sweeps);
+    }
+
+        // 4. Jacobi solver for all three stencils, same initial values
+    for (int s = 0; s < 3; s++) {
+        memcpy(U, U_master, len * sizeof(double));
+        GpuJacobiResult result = solve_jacobi_gpu_new(Nx, Ny, stencils[s], U, maxIter,
+                                           epsilon, check_every);
+        printf("\nStencil: %s\n", stencils[s]->name);
+        printf("Grid: %d x %d\n", Nx, Ny);
+        printf("Computation Time for %d sweeps: %f s (%.1f million updates/s)\n",
+               result.iterations_completed, result.t_sweeps,
+               (double) Nx * Ny * result.iterations_completed
+                   / result.t_sweeps * 1e-6);
+printf("Total Time for %d sweeps: %f s (%.1f million updates/s)\n",
+               result.iterations_completed, 
+                   (result.t_to_gpu + result.t_sweeps + result.t_to_cpu),
+               (double) Nx * Ny * result.iterations_completed
+                   / (result.t_to_gpu + result.t_sweeps + result.t_to_cpu) * 1e-6);                   
+        printf("Residual norm (L2, every %d sweeps): %f\n",
+               check_every, result.final_residual);
     }
 #endif
 

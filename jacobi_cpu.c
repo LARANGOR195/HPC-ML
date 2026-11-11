@@ -38,34 +38,6 @@
      + s20 * U[(idx) - (L) - 1] + s21 * U[(idx) - (L)] + s22 * U[(idx) - (L) + 1])
 
 /* ------------------------------------------------------------------------ */
-/* Five-point Jacobi sweep (Exercise 2)                                     */
-/* ------------------------------------------------------------------------ */
-
-/* The boundary values of V are not changed. */
-void jacobi_sweep(int Nx, int Ny, double *U, double *V)
-{
-    int L = Nx + 2;
-    #pragma omp parallel for schedule(static)
-    for (int j = 1; j <= Ny; j++)
-        for (int i = 1; i <= Nx; i++)
-            V[j * L + i] = 0.25 * (U[(j - 1) * L + i] + U[j * L + i - 1]
-                                 + U[j * L + i + 1] + U[(j + 1) * L + i]);
-}
-
-void jacobi_sweep_blocked(int Nx, int Ny, int B, double *U, double *V)
-{
-    int L = Nx + 2;
-    for (int i0 = 1; i0 <= Nx; i0 += B) {
-        int i1 = (i0 + B - 1 < Nx) ? i0 + B - 1 : Nx;   /* last block shorter */
-        #pragma omp parallel for schedule(static)
-        for (int j = 1; j <= Ny; j++)
-            for (int i = i0; i <= i1; i++)
-                V[j * L + i] = 0.25 * (U[(j - 1) * L + i] + U[j * L + i - 1]
-                                     + U[j * L + i + 1] + U[(j + 1) * L + i]);
-    }
-}
-
-/* ------------------------------------------------------------------------ */
 /* General 3x3 stencil                                                      */
 /* ------------------------------------------------------------------------ */
 
@@ -101,22 +73,6 @@ void jacobi_sweep_blocked_generic(int Nx, int Ny, int B, const Stencil *S,
             }
         }
     }
-}
-
-/* L1 norm of the residual  r = S U  (right-hand side f = 0) */
-double compute_norm_l1(int Nx, int Ny, const Stencil *S, const double *U)
-{
-    int L = Nx + 2;
-    LOAD_STENCIL(S);
-    double total_sum = 0.0;
-
-    #pragma omp parallel for reduction(+:total_sum) schedule(static)
-    for (int j = 1; j <= Ny; j++)
-        for (int i = 1; i <= Nx; i++) {
-            int idx = j * L + i;
-            total_sum += fabs(APPLY_STENCIL(U, idx, L));
-        }
-    return total_sum;
 }
 
 /* ------------------------------------------------------------------------ */

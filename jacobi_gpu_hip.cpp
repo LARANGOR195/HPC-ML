@@ -243,6 +243,110 @@ GpuTimes solve_jacobi_gpu(int Nx, int Ny, const Stencil *S, double *U_start, int
     return times;
 }
 
+__global__ void diff_sq_sum_kernel(int Nx, int Ny, 
+                                   const double * __restrict__ U, 
+                                   const double * __restrict__ V, 
+                                   double *d_sum)
+{
+    __shared__ double sdata[256]; // Array-Größe [256] für 16x16 Threads
+
+    int ix = blockIdx.x * blockDim.x + threadIdx.x + 1;
+    int iy = blockIdx.y * blockDim.y + threadIdx.y + 1;
+    int tid = threadIdx.y * blockDim.x + threadIdx.x;
+    int L = Nx + 2;
+
+    double val = 0.0;
+    if (ix <= Nx && iy <= Ny) {
+        int idx = iy * L + ix;
+        double diff = U[idx] - V[idx];
+        val = diff * diff;
+    }
+
+    sdata[tid] = val;
+    __syncthreads();
+
+    for (unsigned int s = 128; s > 0; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        atomicAdd(d_sum, sdata[0]); // [0] nicht vergessen
+    }
+}
+
+extern "C" void gpu_launch_diff_sq_sum(int Nx, int Ny, const double *d_U, const double *d_V, double *d_sum)
+{
+    dim3 block(16, 16);
+    dim3 grid((Nx + block.x - 1) / block.x, (Ny + block.y - 1) / block.y);
+    hipLaunchKernelGGL(diff_sq_sum_kernel, grid, block, 0, 0, Nx, Ny, d_U, d_V, d_sum);
+}
+
+extern "C" GpuJacobiResult solve_jacobi_gpu_new(int Nx, int Ny, const Stencil *S, double *U_start,
+                                                int kmax, double epsilon, int check_every)
+{
+    size_t bytes = (size_t) (Nx + 2) * (Ny + 2) * sizeof(double);
+    double *d_U, *d_V, *d_sum;
+    
+    double sc = fabs(S->matrix[1][1]); // Zentrumselement [1][1]
+    double res_norm = -1.0;
+
+    GpuJacobiResult res;
+    res.sol_ptr = U_start;
+
+    gpu_set_stencil(S);
+    CUDA_CHECK(hipMalloc(&d_U, bytes));
+    CUDA_CHECK(hipMalloc(&d_V, bytes));
+    CUDA_CHECK(hipMalloc(&d_sum, sizeof(double)));
+
+    double t0 = wtime();
+    CUDA_CHECK(hipMemcpy(d_U, U_start, bytes, hipMemcpyHostToDevice));
+    CUDA_CHECK(hipMemcpy(d_V, d_U, bytes, hipMemcpyDeviceToDevice));
+    CUDA_CHECK(hipDeviceSynchronize());
+    res.t_to_gpu = wtime() - t0;
+
+    t0 = wtime();
+    int k;
+    for (k = 0; k < kmax; k++) {
+        gpu_launch_sweep(Nx, Ny, d_U, d_V);
+
+        int check = (check_every > 0) && ((k + 1) % check_every == 0);
+        if (check) {
+            double h_sum = 0.0;
+            CUDA_CHECK(hipMemset(d_sum, 0, sizeof(double)));
+            gpu_launch_diff_sq_sum(Nx, Ny, d_U, d_V, d_sum);
+            CUDA_CHECK(hipMemcpy(&h_sum, d_sum, sizeof(double), hipMemcpyDeviceToHost));
+            res_norm = sc * sqrt(h_sum);
+        }
+
+        double *tmp = d_U;
+        d_U = d_V;
+        d_V = tmp;
+
+        if (check && res_norm < epsilon) {
+            k++;
+            break;
+        }
+    }
+    CUDA_CHECK(hipDeviceSynchronize());
+    res.t_sweeps = wtime() - t0;
+
+    t0 = wtime();
+    CUDA_CHECK(hipMemcpy(U_start, d_U, bytes, hipMemcpyDeviceToHost));
+    res.t_to_cpu = wtime() - t0;
+
+    CUDA_CHECK(hipFree(d_U));
+    CUDA_CHECK(hipFree(d_V));
+    CUDA_CHECK(hipFree(d_sum));
+
+    res.iterations_completed = k;
+    res.final_residual = res_norm;
+    return res;
+}
+
+
 /* ------------------------------------------------------------------------ */
 /* tests                                                                    */
 /* ------------------------------------------------------------------------ */

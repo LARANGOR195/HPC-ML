@@ -1,3 +1,13 @@
-gcc -O3 -DUSE_CUDA -c main.c -o main.o
-gcc -O3 -c jacobi_cpu.c -o jacobi_cpu.o
-/opt/rocm-6.4.2/core-10.1/lib/llvm/bin/amdclang++ -O3 --offload-arch=gfx1201 --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 -I/opt/rocm-6.4.2/core-10.1/include main.o jacobi_cpu.o -x hip jacobi_gpu_hip.cpp -o jacobi_test
+# 1. main.c kompilieren (-fopenmp schadet hier nicht, falls OpenMP-Header genutzt werden)
+gcc -O3 -fopenmp -DUSE_CUDA -c main.c -o main.o
+
+# 2. jacobi_cpu.c kompilieren (hier ist -fopenmp zwingend für #pragma omp)
+gcc -O3 -fopenmp -c jacobi_cpu.c -o jacobi_cpu.o
+
+# 3. GPU-Code kompilieren und alles zusammenlinken (-fopenmp und -lm am Ende)
+/opt/rocm-6.4.2/core-10.1/lib/llvm/bin/amdclang++ -O3 --offload-arch=gfx1201 \
+  --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 \
+  -I/usr/include/c++/13 -I/usr/include/x86_64-linux-gnu/c++/13 \
+  -I/opt/rocm-6.4.2/core-10.1/include \
+  main.o jacobi_cpu.o -x hip jacobi_gpu_hip.cpp \
+  -fopenmp -lm -o jacobi_test
