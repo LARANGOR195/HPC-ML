@@ -29,41 +29,6 @@ double *new_array(int len)
     return a;
 }
 
-// void check_sweep(int Nx, int Ny, int B)
-// {
-//     int L = Nx + 2;
-//     double h = 1.0 / (Nx + 1);
-//     double *U = new_array((Nx + 2) * (Ny + 2));
-//     double *V = new_array((Nx + 2) * (Ny + 2));
-
-//     for (int j = 0; j <= Ny + 1; j++)
-//         for (int i = 0; i <= Nx + 1; i++) {
-//             double x = i * h, y = j * h;
-//             U[j * L + i] = x * x + y * y;
-//         }
-
-//     if (B > 0)
-//         jacobi_sweep_blocked(Nx, Ny, B, U, V);
-//     else
-//         jacobi_sweep(Nx, Ny, U, V);
-
-//     double err = 0.0;
-//     for (int j = 1; j <= Ny; j++)
-//         for (int i = 1; i <= Nx; i++) {
-//             double d = V[j * L + i] - U[j * L + i] - h * h;
-//             if (d < 0) d = -d;
-//             if (d > err) err = d;
-//         }
-
-//     if (B > 0)  printf("  blocked (B = %d): ", B);
-//     else        printf("  without blocking: ");
-    
-//     if (err / (h * h) < 1e-6)   printf("max |V - U - h^2| / h^2 = %.1e  OK\n", err / (h * h));
-//     else                        printf("max |V - U - h^2| / h^2 = %.1e  WRONG\n", err / (h * h));
-
-//     free(U); free(V);
-// }
-
 double measure_bandwidth(int n)
 {
     double *A = new_array(n);
@@ -86,33 +51,6 @@ double measure_bandwidth(int n)
     free(A); free(B); free(C);
     return 32.0 * n / tmin * 1e-9;
 }
-
-// void measure_performance(int Nx, int Ny, int B)
-// {
-//     double n = (double) Nx * Ny;
-//     double *U = new_array((Nx + 2) * (Ny + 2));
-//     double *V = new_array((Nx + 2) * (Ny + 2));
-//     for (int k = 0; k < (Nx + 2) * (Ny + 2); k++) U[k] = 1.0;
-
-//     double tmin = 1e30, tmin_b = 1e30;
-//     for (int r = 0; r < 5; r++) {
-//         double t0 = wtime();
-//         jacobi_sweep(Nx, Ny, U, V);
-//         double t = wtime() - t0;
-//         if (t < tmin) tmin = t;
-
-//         if (B > 0) {
-//             t0 = wtime();
-//             jacobi_sweep_blocked(Nx, Ny, B, U, V);
-//             t = wtime() - t0;
-//             if (t < tmin_b) tmin_b = t;
-//         }
-//     }
-//     printf("%8d %8d   %12.1f", Nx, Ny, n / tmin * 1e-6);
-//     if (B > 0) printf("   %12.1f", n / tmin_b * 1e-6);
-//     printf("\n");
-//     free(U); free(V);
-// }
 
 /* ========================================================================= */
 /* ERWEITERUNGEN FÜR DIE NEUEN ANFORDERNUNGEN (k-Sweeps & Stencils)          */
@@ -218,13 +156,15 @@ void run_gpu_tests(void)
 // Performance table for one stencil: k sweeps per measurement, Nx*Ny = 2^24
 void print_performance_table_cpu(const Stencil *S, int k_sweeps, int B)
 {
+    printf("\n======================================================");        
     printf("\nPerformance for %s (%d sweeps, million updates per second):\n",
            S->name, k_sweeps);
     printf("%8s %8s   %12s", "Nx", "Ny", "no blocking");
     if (B > 0)
         printf("   %12s", "blocked");
     printf("\n");
-
+    printf("======================================================\n");
+    
     for (int e = 8; e <= 21; e++) {          // Nx = 2^8, ..., 2^21
         int Nx = 1 << e;
         int Ny = (1 << 24) / Nx;             // number of points stays 2^24
@@ -299,29 +239,6 @@ void print_performance_table_gpu(const Stencil *S, int k_sweeps)
     }
 }
 #endif
-// // Hilfsfunktion nur für die finale Zusammenfassung (Single Run für 1024x1024)
-// double get_single_run_mups_cpu(int Nx, int Ny, int B, const Stencil *S, int k)
-// {
-//     double n = (double) Nx * Ny;
-//     double *U = new_array((Nx + 2) * (Ny + 2));
-//     double *V = new_array((Nx + 2) * (Ny + 2));
-//     for (int i = 0; i < (Nx + 2) * (Ny + 2); i++) U[i] = 1.0;
-
-//     double tmin = 1e30;
-//     for (int r = 0; r < 5; r++) {
-//         double t0 = wtime();
-//         double *current_U = U; double *current_V = V;
-//         for (int step = 0; step < k; step++) {
-//             if (B > 0) jacobi_sweep_blocked_generic(Nx, Ny, B, S, current_U, current_V);
-//             else       jacobi_sweep_generic(Nx, Ny, S, current_U, current_V);
-//             double *tmp = current_U; current_U = current_V; current_V = tmp;
-//         }
-//         double t = wtime() - t0;
-//         if (t < tmin) tmin = t;
-//     }
-//     free(U); free(V);
-//     return (n * k) / tmin * 1e-6;
-// }
 
 /* ========================================================================= */
 /* MAIN-STEUERUNG                                                            */
@@ -332,8 +249,8 @@ int main(int argc, char **argv)
     int k_sweeps = 50;          // sweeps per measurement in the tables
     int maxIter = 1000;
     int check_every = 100;        // residual only every 10 sweeps (costs a sweep)
-    int Nx = 512; //2048;
-    int Ny = 512; //2048;
+    int Nx = 2048;
+    int Ny = 2048;
     double epsilon = 1e-4;
     int len = (Nx + 2) * (Ny + 2);
     double *U = new_array(len);
@@ -401,14 +318,6 @@ int main(int argc, char **argv)
         printf("\n======================================================\n");
         printf("Stencil: %s | Grid: %d x %d\n", stencils[s]->name, Nx, Ny);
         printf("======================================================\n");
-
-        // ------------------------------------------------------------
-        // BERECHNUNG AUF DER GPU (Deine Portierung!)
-        // ------------------------------------------------------------
-        
-    
-
-    
         // Wir setzen das Arbeits-Array U wieder exakt auf die CPU-Startmatrix zurück
         memcpy(U, U_master, len * sizeof(double)); 
         
