@@ -17,6 +17,9 @@ void jacobi_sweep_blocked_generic(int Nx, int Ny, int B, const Stencil *S,
 
 /* residual and solver (jacobi_cpu.c) */
 double compute_norm_l1(int Nx, int Ny, const Stencil *S, const double *U);
+
+extern double measure_bandwidth_gpu(int n);
+
 JacobiResult solve_jacobi(int Nx, int Ny, const Stencil *S, double *U_start,
                           int kmax, double epsilon, int check_every);
 

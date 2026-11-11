@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include "jacobi.h"
+#include "stencils.h"
 
 /* ========================================================================= */
 /* ORIGINAL-MODULE AUS DER VORLAGE (UNVERÄNDERT)                             */
@@ -234,7 +235,7 @@ void print_performance_table_cpu(const Stencil *S, int k_sweeps, int B)
         for (int i = 0; i < (Nx + 2) * (Ny + 2); i++) { U[i] = 1.0; V[i] = 1.0; }
 
         double tmin = 1e30, tmin_b = 1e30;
-        for (int r = 0; r < 5; r++) {
+      //  for (int r = 0; r < 5; r++) {
             double *cu = U, *cv = V;
             double t0 = wtime();
             for (int step = 0; step < k_sweeps; step++) {
@@ -254,7 +255,7 @@ void print_performance_table_cpu(const Stencil *S, int k_sweeps, int B)
                 t = (wtime() - t0) / k_sweeps;
                 if (t < tmin_b) tmin_b = t;
             }
-        }
+       // }
 
         printf("%8d %8d   %12.1f", Nx, Ny, n / tmin * 1e-6);
         if (B > 0)
@@ -263,7 +264,40 @@ void print_performance_table_cpu(const Stencil *S, int k_sweeps, int B)
         free(U); free(V);
     }
 }
+#ifdef USE_CUDA
+void print_performance_table_gpu(const Stencil *S, int k_sweeps)
+{
+    printf("\nPerformance for %s on GPU (%d sweeps, million updates per second):\n",
+           S->name, k_sweeps);
+    printf("%8s %8s   %12s\n", "Nx", "Ny", "GPU Kernel");
 
+    for (int e = 8; e <= 21; e++) {          // Nx = 2^8, ..., 2^21
+        int Nx = 1 << e;
+        int Ny = (1 << 24) / Nx;             // Gesamtzahl der Punkte bleibt 2^24
+
+        double n = (double) Nx * Ny;
+        size_t len = (size_t)(Nx + 2) * (Ny + 2);
+        
+        // Host-Speicher allozieren und initialisieren
+        double *U = new_array(len);
+        for (size_t i = 0; i < len; i++) { U[i] = 1.0; }
+
+        // Aufruf deiner funktionierenden GPU-Methode!
+        // Sie übernimmt das Allozieren, den Hin-Transfer, das k-fache Sweepen,
+        // das Zeigerswapping auf dem Device und den Rücktransfer.
+        GpuTimes times = solve_jacobi_gpu(Nx, Ny, S, U, k_sweeps);
+
+        // Um exakt dasselbe zu messen wie bei der CPU (Zeit pro einzelnem Sweep):
+        // teilen wir die gemessene reine Rechenzeit (t_sweeps) durch k_sweeps.
+        double t_per_sweep = times.t_sweeps / k_sweeps;
+
+        // Ausgabe im exakt selben Tabellenformat (Updates pro Sekunde)
+        printf("%8d %8d   %12.1f\n", Nx, Ny, n / t_per_sweep * 1e-6);
+
+        free(U);
+    }
+}
+#endif
 // // Hilfsfunktion nur für die finale Zusammenfassung (Single Run für 1024x1024)
 // double get_single_run_mups_cpu(int Nx, int Ny, int B, const Stencil *S, int k)
 // {
@@ -294,11 +328,11 @@ void print_performance_table_cpu(const Stencil *S, int k_sweeps, int B)
 int main(int argc, char **argv)
 {
     int B = (argc > 1) ? atoi(argv[1]) : 0;   // block width, 0: no blocking
-    int k_sweeps = 100;          // sweeps per measurement in the tables
-    int maxIter = 100;
-    int check_every = 10;        // residual only every 10 sweeps (costs a sweep)
-    int Nx = 2048;
-    int Ny = 2048;
+    int k_sweeps = 50;          // sweeps per measurement in the tables
+    int maxIter = 1000;
+    int check_every = 100;        // residual only every 10 sweeps (costs a sweep)
+    int Nx = 256; //2048;
+    int Ny = 256; //2048;
     double epsilon = 1e-4;
     int len = (Nx + 2) * (Ny + 2);
     double *U = new_array(len);
@@ -334,8 +368,8 @@ int main(int argc, char **argv)
     printf("\nMemory bandwidth (triad): %.1f GB/s\n", measure_bandwidth(1 << 23));
 
     // 3. performance tables (uncomment if needed, they take a while)
-    // for (int s = 0; s < 3; s++)
-    //     print_performance_table_cpu(stencils[s], k_sweeps, B);
+    for (int s = 0; s < 3; s++)
+    //    print_performance_table_cpu(stencils[s], k_sweeps, B);
     (void) k_sweeps;
 
     // 4. Jacobi solver for all three stencils, same initial values
@@ -356,6 +390,30 @@ int main(int argc, char **argv)
 #ifdef USE_CUDA
     printf("\n--- GPU PATH ACTIVE (CLUSTER MODE) ---\n");
     run_gpu_tests();
+	
+    double bw_gpu = measure_bandwidth_gpu(1 << 23);
+    printf("\n=== STREAM TRIAD BANDWIDTH COMPARISON ===\n");
+    //printf("CPU Bandwidth: %.2f GB/s\n", bw_cpu);
+    printf("GPU Bandwidth (triad): %.2f GB/s\n", bw_gpu);
+    
+        for (int s = 0; s < 3; s++) {
+        printf("\n======================================================\n");
+        printf("Stencil: %s | Grid: %d x %d\n", stencils[s]->name, Nx, Ny);
+        printf("======================================================\n");
+
+        // ------------------------------------------------------------
+        // BERECHNUNG AUF DER GPU (Deine Portierung!)
+        // ------------------------------------------------------------
+        
+    
+
+    
+        // Wir setzen das Arbeits-Array U wieder exakt auf die CPU-Startmatrix zurück
+        memcpy(U, U_master, len * sizeof(double)); 
+        
+        // Aufruf deiner portierten GPU-Methode
+print_performance_table_gpu(stencils[s], k_sweeps);
+    }
 #endif
 
     free(U);
