@@ -1,102 +1,68 @@
 %%%%%%%%%%%%%%%%%
 % Numerische Ergebnisse
 %%%%%%%%%%%%%%%%%
-\section{Numerische Ergebnisse}\label{cap:num}
-Dieses Kapitel basiert auf drei jeweils zusammengesetzten Datensätzen, die in Tabelle~\ref{tab:Chap05_tab_dataset} beschrieben werden. 
-%\input{Chap05_tab_dataset}
+\section{Results}
+All experiments were conducted on an \textbf{AMD Ryzen 7 5700X} CPU (8 cores, 32\,MB L3 cache, measured STREAM triad bandwidth of $36.2\,\text{GB/s}$) and an \textbf{AMD Radeon RX 9070} GPU (measured STREAM triad bandwidth of $682.45\,\text{GB/s}$). 
 
-Für alle Instanzen können die in Tabelle~\ref{tab:Chap04_tab_benchmarks} und von Nazeri et al. \cite[8]{NAZERI2023} dokumentierten Brennzahlen bestätigt, aber in keinem einzigen Fall verbessert werden. 
-Die Auswertung der generierten Datensätze mit 193500 bzw. 22400 Zeilen erfolgt mittels Pivot-Tabellen in LibreOffice Calc. 
-Das unterschiedliche Design der Rechenstudien ergibt sich einerseits aus einer unbeabsichtigten, 20-maligen Wiederholung der Berechnungen für die stochastischen Graphen. 
-Andererseits hat die diesjährige Umstellung von Winter- auf Sommerzeit zwischen dem Abschluss von \texttt{202603271448-BA.csv} und dem Start von \texttt{202603280325.csv} stattgefunden. 
+Across both architectures, all three stencils ($S_5$, $S_9$, and $S_5^{\text{diag}}$) achieve nearly identical throughput, confirming that the Jacobi kernels are strictly \emph{memory-bound}. On the large $2^{24}$-point grid, the spatially blocked CPU implementation sustains $\approx 1500\,\text{MUpdates/s}$, effectively saturating the Ryzen 7 5700X's main memory bandwidth. Without spatial blocking, CPU performance degrades by up to $40\%$ (dropping to $\approx 891\,\text{MUpdates/s}$) once the row length reaches $N_x \ge 65\,536$. At this size, three consecutive grid rows exceed the L1/L2 cache capacity, leading to cache eviction and redundant DRAM accesses. Spatial blocking eliminates this layer-condition bottleneck entirely.
 
-Es bietet sich an, bestimmte Resultate separat zu betrachten: 
-Die Gesamtlaufzeit der jeweils 100 Barab\'asi--Albert- und Erd\H{o}s--R\'enyi-Graphen ist für die Bestimmung einer optimalen Strategie über alle 215 Instanzen vernachlässigbar klein. 
-Zugleich existieren drei besonders rechenintensive Instanzen, die das Laufzeitverhalten des gesamten Systems maßgeblich beeinflussen. 
-Die Zeitangaben sind mathematisch auf 0.01~s genau gerundet. Ein tabellierter Wert von 0 bedeutet somit eine vernachlässigbar kleine Rechenzeit unter 0.005~s. 
+On the Radeon RX 9070, the pure compute kernel maintains a stable throughput of $\approx 13.2$ GUpdates/s across all grid aspect ratios---an $\approx 8.8\times$ speedup over the blocked CPU execution, driven by the GPU's $18.85\times$ higher memory bandwidth. While PCIe host-to-device data transfers noticeably reduce the effective throughput during short 50-sweep runs ($6.0\text{--}10.9\,\text{GUpdates/s}$), this transfer overhead becomes negligible ($< 2\%$) over $1000$ sweeps. On the smaller $512 \times 512$ grid ($2\,\text{MB}$ per double-precision array), the working set fits entirely within the Ryzen 7 5700X's $32\,\text{MB}$ L3 cache, boosting CPU throughput to $\approx 5.0\text{--}5.4\,\text{GUpdates/s}$, whereas the GPU reaches $\approx 10.5\,\text{GUpdates/s}$ due to kernel launch latencies.
 
-%%%%%%%%%%%%%%%%%
-% Laufzeit des AGA
-%%%%%%%%%%%%%%%%%
-\subsection{Rechenzeit des adaptiven genetischen Algorithmus (sequenziell)}
-Die Ausführung des genetischen Algorithmus nimmt den größten Anteil an der Gesamtrechenzeit ein.
-Die Auswertung basiert auf den zusammengeführten Datensätzen \texttt{202603271448.csv} und \texttt{202603280325.csv} und ist nach den untersuchten Instanzen gegliedert. 
-Unauffällige Instanzen werden dabei nur in der zusammenfassenden Tabelle~\ref{tab:Chap05_tab_t_all} dargestellt. 
-Auffällige Instanzen werden hingegen in separaten Unterkapiteln analysiert. 
+Finally, comparing numerical convergence on the $512 \times 512$ grid after $1000$ sweeps highlights the efficiency of the compact 9-point stencil $S_9$: because its additional arithmetic operations are hidden by the memory-bandwidth limit, $S_9$ incurs no runtime penalty while reducing the $L_2$ residual by more than two orders of magnitude compared to $S_5$ ($0.099$ vs.\ $12.76$).
 
-Die stochastisch generierten Graphen werden separat betrachtet. 
-Aufgrund ihrer äußerst geringen Rechenzeit –- kumuliert etwa 35~s bei einer Gesamtlaufzeit von ca. 11.4~Stunden –- besitzen sie keine statistische Relevanz für die Wahl einer optimalen Strategie für die gesamte Menge an Instanzen. 
-Darüber hinaus würde die Aufnahme dieser 200 Instanzen die Ergebnistabelle massiv aufblähen. 
-Dies würde die Handhabung der Tabelle und die Analyse der signifikanten Daten erschweren.
+\subsection*{Performance and Convergence Analysis}
 
-Die Rechenzeiten sind in Tabelle~\ref{tab:Chap05_tab_t_all} aufgeführt. 
-Lediglich drei Instanzen beanspruchen zusammen 97.54~\% der gesamten Rechenzeit des genetischen Algorithmus. 
-Dazu zählen \texttt{cite} (59.05~\%), \texttt{tvshow} (35.22~\%) und \texttt{HR} (3.27~\%). 
-Laufzeitverbesserungen lassen sich deshalb maßgeblich durch die Fokussierung auf diese drei Instanzen erreichen.
+All experiments were conducted on an \textbf{AMD Ryzen~7~5700X} CPU (8 cores, $32\,\text{MB}$ L3 cache, measured STREAM triad bandwidth of $37.4\,\text{GB/s}$) and an \textbf{AMD Radeon~RX~9070} GPU ($8\,\text{MB}$ L2 cache, $64\,\text{MB}$ Infinity Cache, measured STREAM triad bandwidth of $684.28\,\text{GB/s}$).
 
-%\input{Chap05_tab_t_aga_sonst}
-
-%%%%%%%%%%%%%%%%%
-% BA
-%%%%%%%%%%%%%%%%%
-\subsubsection{Barab\'asi--Albert-Graphen}
-Dieses Unterkapitel basiert auf dem Datensatz \texttt{202603271448.csv}. 
-Von den 100 generierten Barab\'asi--Albert-Graphen weisen 80 Graphen eine Brennzahl von $b=4$ auf, 20 Graphen haben $b=5$. 
-Die Tabellen \ref{tab:norm-approx1} und \ref{tab:norm-approx2} zeigen die empirischen Kennzahlen dieser 100 Graphen sowie die daraus resultierenden Parameter der Normalverteilungsapproximation.
-\begin{table}[htbp]
-  \centering
-  \small
-  \begin{tabular}{p{4.5cm}p{2.3cm}c} 
-  \hline
-  Kennzahl & Wert & Formel \\
-  \hline
-$\bar X$  & 4.2 & (\ref{eq:mu}) \\
-$\hat\sigma^2$ & 0.1616 & (\ref{eq:var}) \\
-$\hat\rho$ & 0.1088 & (\ref{eq:rho}) \\
-     \hline
-  \end{tabular}
-  \caption{Kennzahlen der generierten Barab\'asi--Albert-Graphen}
-  \label{tab:norm-approx1}
-\end{table}
+On the large $2^{24}$-point grid ($128\,\text{MB}$ per double-precision array), all three stencils ($S_5$, $S_9$, and $S_5^{\text{diag}}$) achieve nearly identical throughput across both architectures, confirming that the kernels are strictly \emph{memory-bound} (Table~\ref{tab:aspect_ratio}). The spatially blocked CPU version sustains $\approx 1.50\text{--}1.54\,\text{GUpdates/s}$, saturating the $37.4\,\text{GB/s}$ main memory bandwidth at the theoretical minimum of $24\,\text{Bytes/update}$. Without spatial blocking, CPU performance drops by up to $41\%$ (to $\approx 0.89\,\text{GUpdates/s}$) for row lengths $N_x \ge 65\,536$, as three consecutive grid rows exceed the L1/L2 cache capacity and trigger cache evictions. Spatial blocking eliminates this bottleneck completely.
 
 \begin{table}[htbp]
-  \centering
-  \small
- \begin{tabular}{p{4.5cm}p{2.3cm}c} 
-  \hline
-  Kennzahl & Wert & Formel \\
-  \hline
-95\,\% Konfidenzintervall für $\mu$ & $[ 4.1202, 4.2798 ]$ & (\ref{eq:KI-mu}) \\
-95\,\% Konfidenzintervall für $\sigma$ & $[ 0.3529, 0.4671 ]$ & (\ref{eq:KI-sigma}) \\
-Berry-Esseen-Schranke & 0.0795 & (\ref{eq:BEL}) \\
-%$\gamma$ & 1.477 & (\ref{eq:gamma}) \\
-     \hline
-  \end{tabular}
-  \caption{Kennzahlen der Normalverteilungsapproximation}
-  \label{tab:norm-approx2}
+    \centering
+    \caption{Throughput (in GUpdates/s) across varying grid aspect ratios ($N_x \times N_y = 2^{24}$) for the compact 9-point stencil $S_9$ over $50$ sweeps.}
+    \label{tab:aspect_ratio}
+    \small
+    \begin{tabular}{rrcccc}
+        \hline
+        \textbf{$N_x$} & \textbf{$N_y$} & \textbf{CPU (unblocked)} & \textbf{CPU (blocked)} & \textbf{GPU (pure)} & \textbf{GPU (transfer)} \\
+        \hline
+        $256$         & $65\,536$ & $1.53$ & $1.54$ & $13.16$ & $11.21$ \\
+        $4096$        & $4096$    & $1.51$ & $1.51$ & $13.14$ & $10.23$ \\
+        $32\,768$     & $512$     & $1.32$ & $1.32$ & $13.13$ & $10.91$ \\
+        $65\,536$     & $256$     & $1.10$ & $1.42$ & $13.12$ & $10.28$ \\
+        $262\,144$    & $64$      & $0.89$ & $1.42$ & $13.22$ & $10.91$ \\
+        $2\,097\,152$ & $8$       & $1.38$ & $1.42$ & $13.15$ & $9.63$  \\
+        \hline
+    \end{tabular}
 \end{table}
 
-Ein Problem der Normalverteilungsannahme in dieser Arbeit stellt die Stetigkeit der Normalverteilung dar, während die zu approximierenden Daten diskrete Werte aufweisen. 
-Ein weiteres Problem stellt der Definitionsbereich $\mathbb{R}$ dar. Es besteht immer eine positive Wahrscheinlichkeit für das Auftreten von negativen Werten. 
-Dem wird mit der Wahl der beiden Verteilungsparameter begegnet. 
-Eine im Vergleich zum Mittelwert kleine Standardabweichung verschiebt den Großteil der Wahrscheinlichkeitsdichte in den positiven Bereich. 
-Mit $\mu = 2.576 \sigma$ fallen 0.5\% der Werte negativ aus.  
-Im vorliegenden Fall ist die Wahrscheinlichkeit, negative Zufallszahlen zu sehen, kleiner als $7.5324 \cdot 10^{-26}$. 
-%Negative Werte können also vernachlässigt werden. 
+On the Radeon~RX~9070, the pure compute kernel maintains a stable throughput of $\approx 13.1\text{--}13.4\,\text{GUpdates/s}$ across all aspect ratios on the $2^{24}$ grid---an $\approx 8.8\times$ speedup over the blocked CPU implementation. While PCIe host-to-device transfers reduce effective throughput during short 50-sweep runs ($9.6\text{--}11.4\,\text{GUpdates/s}$), this overhead drops to $< 3.5\%$ over $1000$ sweeps (Table~\ref{tab:convergence_perf}).
 
-Der Mittelwert $\bar X =4.2$ und die emprische Varianz $\hat\sigma^2 = \frac{16}{99}$ bilden die ersten zwei Momente der diskreten empirischen Verteilung ab. 
-Da ca. 95.86\% der Wahrscheinlichkeitsmasse im Intervall [3.5, 5.5] liegen, kann die Normalverteilung die empirische Zwei-Punkte-Verteilung hinreichend gut approximieren. 
-Dabei beträgt die Wahrscheinlichkeit für Zufallszahlen kleiner 3.5 etwa 4.08\%, während sie für Werte größer 5.5 bei ca. 0.06\% liegt. 
+\begin{table}[htbp]
+    \centering
+    \caption{Throughput (in GUpdates/s) and final $L_2$ residual norm after $1000$ Jacobi sweeps on the Ryzen~7~5700X (blocked) and Radeon~RX~9070.}
+    \label{tab:convergence_perf}
+    \small
+    \begin{tabular}{llcccc}
+        \hline
+        \textbf{Grid Size} & \textbf{Stencil} & \textbf{CPU} & \textbf{GPU (pure)} & \textbf{GPU (total)} & \textbf{$L_2$ Residual} \\
+        \hline
+        $512 \times 512$   & $S_5$               & $4.93$ & $10.47$ & $10.27$ & $12.764$ \\
+                           & $S_9$               & $5.25$ & $10.48$ & $10.36$ & $0.099$  \\
+                           & $S_5^{\text{diag}}$ & $5.36$ & $10.70$ & $10.56$ & $6.914$  \\
+        \hline
+        $2048 \times 2048$ & $S_5$               & $2.52$ & $13.41$ & $12.95$ & $57.767$ \\
+                           & $S_9$               & $2.54$ & $16.56$ & $16.39$ & $0.199$  \\
+                           & $S_5^{\text{diag}}$ & $2.52$ & $22.18$ & $21.88$ & $29.237$ \\
+        \hline
+    \end{tabular}
+\end{table}
 
-Aufgrund der Symmetrie ist die Normalverteilung auch für schief verteilte Zufallsgrößen nicht geeignet. 
-Die empirischen Daten weisen eine signifikante Schiefe auf. 
-\begin{align}
-\gamma = \frac{\E{(X - \mu)^3}}{\sigma^3} \approx 1.477.
-\label{eq:gamma}
-\end{align}
-Dennoch ist der Vorteil der mathematisch einfachen Handhabung der Normalverteilungsapproximation entscheidend, da die experimentellen Daten immer mit Unsicherheit behaftet sind. 
-Der Satz von Berry-Esseen garantiert zudem die gleichmäßige Konvergenz gegen die Verteilungsfunktion der Standardnormalverteilung. 
-Um die Berry-Esseen-Schranke auf einen Wert unter 0.05 zu senken, müssen mindestens 261 Barab\'asi--Albert-Graphen generiert werden. 
+Comparing the $512 \times 512$ ($2\,\text{MB}$/array) and $2048 \times 2048$ ($32\,\text{MB}$/array) grids over $1000$ sweeps reveals distinct cache and latency regimes:
+\begin{itemize}
+    \item \textbf{CPU Cache Hierarchy:} On the $512 \times 512$ grid, the working set fits entirely inside the Ryzen~7~5700X's $32\,\text{MB}$ L3 cache, yielding $\approx 4.9\text{--}5.4\,\text{GUpdates/s}$. At $2048 \times 2048$, the arrays partially spill into main memory, settling at an intermediate rate of $\approx 2.52\,\text{GUpdates/s}$.
+    \item \textbf{GPU Launch Latency vs.\ Infinity Cache:} Despite fitting within the GPU's $8\,\text{MB}$ L2 and $64\,\text{MB}$ L3 caches, the $512 \times 512$ grid is limited to $\approx 10.5\,\text{GUpdates/s}$ by kernel launch overhead ($\approx 25\,\mu\text{s}$ per sweep) and low compute-unit occupancy ($262\text{k}$ threads). At $2048 \times 2048$ ($4.19\text{M}$ threads), launch latencies are amortized and the working set still benefits from the $64\,\text{MB}$ Infinity Cache, pushing throughput up to $13.4\text{--}22.2\,\text{GUpdates/s}$ (up to an $8.8\times$ GPU speedup).
+    \item \textbf{Numerical Convergence:} Across both grid resolutions, the compact 9-point stencil $S_9$ incurs no runtime penalty over $S_5$ while reducing the final $L_2$ residual after $1000$ sweeps by more than two orders of magnitude ($0.199$ vs.\ $57.767$ at $2048 \times 2048$).
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%
 % Optimierung
@@ -139,31 +105,4 @@ Die Ausgabe (stdout sowie stderr) wird zudem in eine Logdatei umgeleitet, deren 
 \texttt{\$(seq 1 \$REPEAT)} stellt eine Zählschleife dar. 
 Der Wert von \texttt{REPEAT} kann mittels \texttt{-r} an das Skript übergeben werden.
 
-%%%%%%%%%%%%%%%%%
-% Synthetische Gesamtlaufzeit
-%%%%%%%%%%%%%%%%%
-\subsection{Gesamtlaufzeit des Programms}
-Als Gesamtlaufzeit des Programms wird in diesem Abschnitt die Summe aus drei ausgewiesenen Einzelzeiten bezeichnet. 
-Sie entspricht der fiktiven Ausführungsdauer, die das Programm benötigen würde, wenn es für jede Kombination aus Zentralitätsmaß und Penalty-Funktion zunächst die Distanzmatrix, dann den Vektor \texttt{centralities} und abschließend die Lösung mit der jeweiligen Penalty-Funktion berechnet hätte.  
-
-Auf Basis von \texttt{202603311445.csv}, \texttt{202603311445-ER.csv}, \texttt{202603311445-BA.csv} (20 Wiederholungen, 215 Instanzen) ergibt sich die folgende Rangfolge: 
-\texttt{KATZ} (3660.22),
-\texttt{KADABRA} (3996.71),
-\texttt{EIGENVECTOR} (4178.31),
-\texttt{RANDOM} (4183.23),
-\texttt{DEGREE} (4199.45),
-\texttt{CLOSENESS} (4526.47),
-\texttt{PAGERANK} (4567.98),
-\texttt{HARMONIC} (13401.20),
-\texttt{BETWEENNESS} (16716.72).
-
-%\input{Chap05_tab_syn_15_par78} 
-
-Die Berechnungen auf Basis von \texttt{KATZ} (3660.22~s) laufen in diesem Experiment am schnellsten durch. 
-\texttt{HARMONIC} (13401.20~s) und \texttt{BETWEENNESS} (16716.72~s) stellen indes die rechenintensivsten Maße dar. 
-\texttt{BETWEENNESS} alleine benötigt rund 28\% der gesamten Laufzeit. 
-Diese extrem langen Laufzeiten bei \texttt{BETWEENNESS} und \texttt{HARMONIC} sind die Ursache für die hohe Gesamtlaufzeit. 
-Besonders interessant ist das gute Abschneiden von \texttt{RANDOM}. 
-Der implementierte genetische Algorithmus kann somit \texttt{DEGREE}, \texttt{CLOSENESS}, \texttt{PAGERANK}, \texttt{HARMONIC} sowie 
-\texttt{BETWEENNESS} weniger zielführende Informationen abgewinnen als \texttt{RANDOM}.
 

@@ -77,30 +77,6 @@ d_i =
 \end{cases}
 \end{align} 
 
-Jedes Chromosom enthält lediglich die ersten $\kappa$ Brandherde einer Brennsequenz. Deshalb kann die Evaluierung einer Brennsequenz erst nach der Festlegung der verbleibenden Brandherde erfolgen. 
-Der Preis eines Chromosoms wird ermittelt, indem die fehlenden Brandherde durch sämtliche geordneten Teilmengen unverbrannter Knoten der Länge $b - \kappa$ ergänzt werden. 
-Der minimale Preis unter allen resultierenden Brennsequenzen wird als der Preis des Chromosoms $C$ bezeichnet \cite[6]{NAZERI2023}.
-
-%%%%%%%%%%%%%%%%%
-% \subsection{Selektion, Crossover und Mutation}
-%%%%%%%%%%%%%%%%%
-\subsection{Selektion, Crossover und Mutation}
-Im vorgeschlagenen Algorithmus wird die Roulette-Wheel-Selektion eingesetzt. Dabei ist für jedes Chromosom die Wahrscheinlichkeit, an den genetischen Operationen Crossover und Mutation beteiligt zu sein, proportional zu seiner Fitness. 
-%Chromosomen mit einer höheren Fitness werden somit mit größerer Wahrscheinlichkeit ausgewählt. 
-%Eine Roulette-Wheel-Selektion ist mit einer Zeitkomplexität von $O(1)$ möglich. 
-Fittere Brennsequenzen ergeben sich aus Chromosomen mit geringeren Strafwerten. 
-Diese sollen mit einer höheren Wahrscheinlichkeit ausgewählt werden. 
-Die Selektionswahrscheinlichkeit des Chromosoms $C_i$ wird somit wie folgt berechnet \cite[6]{NAZERI2023}:
-\begin{align}
-\label{eq:prb-i}
-\pi(C_i) = \frac{1/(p(C_i) + 1)}{\sum_{j=1}^{\mathcal{P}} 1/(p(C_j) + 1)}. 
-\end{align} 
-
-Die Implementierung der Roulette-Wheel-Selektion in \cite{NAZERI2023} besitzt eine Zeitkomplexität von $O(1)$ im Durchschnitt, da die Anzahl der Schleifenläufe nur vom Verhältnis zwischen dem Durchschnittswert $(1 + p(C_i))^{-1}$ und dem maximalen Wert $(1 + p(C_0))^{-1}$ des besten Chromosoms abhängt, jedoch nicht von der Anzahl der Chromosomen im Elitepool. 
-Dies entspricht der angepassten Auswahl gemäß Gleichung~(\ref{eq:prb-i}), da ausschließlich aus dem Elitepool selektiert wird. 
-
-%\input{Chap03_lst_select}
-
 Aufgrund der spezifischen Eigenschaften des GBP werden dafür neue Crossover- und Mutationsoperatoren eingeführt, die auf folgenden Eigenschaften basieren \cite[7]{NAZERI2023}: 
 \begin{itemize}
 \item Die Reihenfolge der Brandherde wird durch diese Operationen nicht verändert. 

@@ -185,12 +185,5 @@ In den trivialen Fällen $Z(v) = \{v\}$ oder $Z(v) = \{v, u\}$ wird allen Knoten
 
 Eine weitere wichtige Funktion der Klasse \texttt{CentralityComputer} ist das Bereitstellen eines statischen Zufallszahlengenerators des Typs \texttt{mt19937\_64} \cite{mt19937}, der hier bei der \texttt{RANDOM}-Strategie und in der Klasse \texttt{GA} zum Einsatz kommt. 
 Im Gegensatz zur Lösung von Nazeri et al. \cite{NAZERI2023} wird nur ein 64"=Bit"=Zufallszahlengenerator erzeugt, der je nach Bedarf ganzzahlige oder reellwertige Zufallszahlen in dem gewünschten Intervall liefern kann.  
-
-%%%%%%%%%%%%%%%%%
-% Parametrisierung des GA
-%%%%%%%%%%%%%%%%%
-\subsection{Parametrisierung des genetischen Algorithmus}\label{cap:aga_param}
-Der vorliegende Algorithmus kann im Unterschied zur Lösung von Nazeri et al. \cite{NAZERI2023} verschiedene Zentralitätsmaßen einsetzen. Dazu zählen \texttt{BETWEENNESS}, \texttt{CLOSENESS}, \texttt{DEGREE}, \texttt{EIGENVECTOR}, \texttt{HARMONIC}, \texttt{KADABRA}, \texttt{KATZ}, \texttt{PAGERANK} sowie \texttt{RANDOM}. 
-Jedes dieser Zentralitätsmaße kann beliebig mit den implementierten Penalty-Funktionen kombiniert werden.  
-Mit der Einführung eines neuen Parameters \texttt{scale} kann die erkennbare Verlangsamung des Programms infolge sehr hoher Werte von \texttt{INF} entschärft werden.  
+ 
 
