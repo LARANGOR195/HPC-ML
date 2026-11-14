@@ -1,8 +1,8 @@
 %%%%%%%%%%%%%%%%%
 % Penalty-Verfahren
 %%%%%%%%%%%%%%%%%
-\section{Theoretische Grundlagen}\label{cap:theo}
-We consider the Poisson equation on the unit square $\Omega = (0,1)^2$ with homogeneous Dirichlet boundary conditions:
+\section{Introduction and Problem Formulation}\label{cap:theo}
+Stencil computations are fundamental to many scientific simulations, yet their efficiency on modern multi-core CPUs and GPUs depends heavily on whether they are memory-bound or compute-bound. To analyze these architectural bottlenecks, we consider the Poisson equation on the unit square $\Omega = (0,1)^2$ with homogeneous Dirichlet boundary conditions:
 \begin{eqnarray}
     %\begin{cases} 
         -\Delta u(x, y) = f & \text{for } (x, y)\in\Omega, \\ 
@@ -18,9 +18,9 @@ $S_5^{\text{diag}} = \frac{1}{2h^2} \begin{bmatrix} -1 & 0 & -1 \\ 0 & 4 & 0 \\ 
 
 To compute the numerical solution, we apply the Jacobi method, which is notoriously known for its slow convergence. 
 For the CPU implementation, we experiment with different block sizes, memory footprints, and core counts. 
-For the GPU implementation, we \textbf{plan to} investigate different thread block dimensions, shared memory configurations, and memory access patterns.
+For the GPU implementation, we investigate different thread block dimensions, shared memory configurations, and memory access patterns.
 
-As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as the $L_2$ norm of the Jacobi step size, $\|U - V\|_2$. 
+As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as the $L_2$ norm of the Jacobi step size, $\|u - v\|_2$. 
 The initial guess is generated randomly, and the exact same initial vector is used across all experiments to ensure comparability.
 
 We test our implementation with different grid sizes and stencils, and measure the time for $k$ sweeps on the CPU and on the GPU, including the transfers.
@@ -29,27 +29,6 @@ We test our implementation with different grid sizes and stencils, and measure t
 \begin{align} \min \quad & \sum_{j \in [1, U]} x_{j}+ 1, \label{obj:ILP-PROP} \\ \text{so dass} \quad & x_{j} \geq 1 - b_{i,j} \qquad \forall v_i \in V, ~ j = 1,2,\ldots,U \label{res:ILP-PROP-xj}\\ & b_{i,j} \leq s_{i,j} + \sum_{v_l \in N(v_i)} b_{l,j-1} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bij} \\ & \sum_{v_i \in V} s_{i,j} = 1 \qquad j=1,2,\ldots,U \label{res:ILP-PROP-sij}\\ 
 & s_{i,j}, ~ b_{i,j}, ~ x_{j} \in \{0, 1\} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bin}\\ & b_{i,0} = 0 \qquad \forall v_i \in V \label{res:ILP-PROP-bi0}
 \end{align}
-
-Das Beispiel von Goldberg \cite[11]{G89} (siehe Abbildung~\ref{fig:RWS}) verdeutlich das Prinzip der Roulette-Wheel-Selektion. 
-Den vier verfügbaren Kandidaten werden Wahrscheinlichkeiten zugeordnet. 
-Der ''beste'' Kandidat hat eine Wahrscheinlichkeit von 49.2\% gezogen zu werden, während der ''schwächste'' Kandidat nur mit einer Wahrscheinlichkeit von 5.5\% ausgewählt wird. 
-\begin{table}[htb]
-    \centering
-    \small
-    \begin{tabular}{rrrr}
-        \hline
-        Nr. & Kodierung & Fitness & \% \\
-        \hline
-        1 & 01101 & 169 & 14.4 \\
-        2 & 11000 & 576 & 49.2 \\
-        3 & 01000 & 64 & 5.5 \\
-        4 & 10011 & 361 & 30.9 \\
-        \hline
-        Summe & & 1170 & 100.0 \\
-        \hline
-    \end{tabular}
-\caption[Beispielhafte Fitnesswerte für Roulette-Wheel-Selektion]{Beispielhafte Fitnesswerte für Roulette-Wheel-Selektion \cite[11]{G89}}
-\end{table}
 
 Die Gesamtpopulation des implementierten genetischen Algorithmus besteht aus drei Teilen, die wie folgt aufgebaut sind:
 \begin{table}[htb]
@@ -68,31 +47,3 @@ Die Gesamtpopulation des implementierten genetischen Algorithmus besteht aus dre
     \end{tabular}
 \caption{Zusammensetzung der Gesamtpopulation des genetischen Algorithmus}
 \end{table}
-
-\subsection{Normalverteilung}
-Die Normalverteilung ist eine zweiparametrige stetige Wahrscheinlichkeitsverteilung über der Menge der reellen Zahlen. Die Normalverteilung kann viele praktische Sachverhalte sehr gut approximieren. Dem zentralen Grenzwertsatz zufolge strebt die Summe von $\mathdutch{n}$ unabhängigen identisch verteilten Zufallsvariablen mit endlicher Varianz, unter schwachen Annahmen, mit $\mathdutch{n}\to\infty$ gegen eine Normalverteilung, unabhängig von der ursprünglichen Verteilung. Infolge dessen kann man Zufallsvariablen als annähernd normalverteilt ansehen, wenn sie durch Überlagerung von vielen unabhängigen kleinen Einflüssen entstehen \cite[309-310]{hen18}. 
-
-\begin{Definition}[Normalverteilung]
-Die Normalverteilung mit den Parametern $\mu \in \mathbb{R}$ und $0 < \sigma^2 < \infty$ hat für alle $x \in \mathbb{R}$ die Wahrscheinlichkeitsdichte
-\begin{align}
-	f(x) = \frac {1}{\sigma\sqrt{2\pi}} e^{-\frac {1}{2} \left(\frac{x-\mu}{\sigma}\right)^2}.
-\end{align}		
-Die \cdf der Normalverteilung ist durch
-\begin{align}
-	F(x) = \frac{1}{\sigma\sqrt{2\pi}} \int_{-\infty}^x e^{-\frac{1}{2} \left(\frac{t-\mu}{\sigma}\right)^2} \mathrm dt
-\end{align}
-gegeben. 
-Eine Normalverteilung mit den Parametern $\mu = 0$ und $\sigma^2 = 1$ heißt Standardnormalverteilung. 
-\end{Definition}
-Zur Abkürzung wird oft $X \sim \mathcal N\left(\mu, \sigma^2\right)$ geschrieben. $\mu$ entspricht dabei dem Erwartungswert und $\sigma^2$ der Varianz der Zufallsgröße $X$.
-
-Jede beliebige Normalverteilung kann standardisiert werden. Es sei $X \sim \mathcal N (\mu, \sigma^2)$. Die Transformation $Z = \frac{X - \mu}{\sigma}$ führt zu $Z \sim \mathcal N (0, 1)$. Die Rücktransformation der Ergebnisse mit $x = \mu + \sigma z$ ermöglicht die Berechnungen für beliebige Normalverteilungen \cite[309-310]{hen18}:  
-\begin{align}
-	\Phi(z) = \frac{1}{\sqrt{2\pi}} \int\limits_{-\infty}^{z} e^{-\frac{1}{2} t^2} \mathrm dt = \frac{1}{\sqrt{2\pi}} \int\limits_{-\infty}^{(x-\mu)/\sigma} e^{-\frac{1}{2} t^2} \mathrm dt = \Phi \left(\frac{x-\mu}{\sigma}\right).
-\end{align}
-Obwohl keine elementare Stammfunktion der \pdf der Normalverteilung existiert, sind die Quantile der Standardnormalverteilung $\mathcal N (0,1)$ tabelliert \cite[Section 1.3.6.7.1]{nist}. Computer-Algebra-Systeme beherrschen nicht nur diese tabellierten Quantile, sondern auch zahlreiche effiziente Algorithmen zur Bestimmung von numerischen Näherungswerten, um den gesuchten Wert mit Hilfe von schnell berechenbaren Approximationen zu ermitteln \cite[931-933]{as72}. 
-
-Die \cdf der Standardnormalverteilung kann auf die (Gaußsche) Fehlerfunktion zurückgeführt werden \cite[298, 7.1.22]{as72}:  
-\begin{align}
-	P(Z \leq z) &= \Phi (z) = \frac{1}{2} \left[ 1+ \erf \left( \frac{z}{\sqrt{2}} \right) \right]. 
-\end{align}
