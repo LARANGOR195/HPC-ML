@@ -48,34 +48,127 @@
   title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
 %  caption={~/Downloads/Kunoth-21/julia/Blatt07/qrsvd.jl}
 }
-%%%%%%%%%%%%%%%%%
-% \subsection{Evaluierung}
-%%%%%%%%%%%%%%%%%
-\subsection{Evaluierung}
-Ein Knoten $v_i \in V$ gilt als verbrannt, wenn er zu irgendeinem Zeitpunkt des Brennprozesses entzündet wurde. 
-Entweder wird er direkt angezündet oder er fängt Feuer durch einen direkten Nachbarn, der bereits brennt. 
-Am Ende des Prozesses wird der Abstand von Knoten $v_i$ zum nächsten verbrannten Knoten als Restabstand $d_i$ bezeichnet. 
-Für jeden verbrannten Knoten gilt $d_i = 0$. 
-Eine valide Brennsequenz zeichnet sich dadurch aus, dass alle Knoten $v_i \in V$ vollständig verbrannt werden. 
-Der Preis einer Brennsequenz $S = (v_1, v_2, \ldots, v_b)$ wird als die Summe der quadrierten Restabstände aller Knoten definiert \cite[6]{NAZERI2023}: 
-\begin{align}
-\label{eq:Cost}
-p(S) = \sum_{v_i \in V} d_i^2,
-\end{align}
-wobei $d_i$ wie folgt berechnet werden kann:   
-\begin{align}
-\label{eq:d-i}
-d_i = 
-\begin{cases} 
-  0 & \text{falls Knoten } v_i \text{ verbrannt ist,} \\
-  \min_{1 \leq j \leq b} \, \{\text{dist}(v_i, v_j) - (b - j) \} & \text{sonst.}
-\end{cases}
-\end{align} 
 
-Aufgrund der spezifischen Eigenschaften des GBP werden dafür neue Crossover- und Mutationsoperatoren eingeführt, die auf folgenden Eigenschaften basieren \cite[7]{NAZERI2023}: 
-\begin{itemize}
-\item Die Reihenfolge der Brandherde wird durch diese Operationen nicht verändert. 
-\item Die Nachbarschaften der jeweiligen Brandherde werden durch diese Operationen exploriert.
-\item Die Exploration der Nachbarschaft eines Knotens soll von seiner Zentralität abhängen.
-\end{itemize}
+\begin{figure}[t]
+    \centering
+    \begin{tikzpicture}
+        \begin{semilogxaxis}[
+            log basis x=2,
+            width=\linewidth,
+            height=8cm,
+            xlabel={Grid width $N_x$ ($256\text{ MiB}$)},
+            xmin=256, xmax=2^21,
+            ylabel={Throughput [GUP/s]},
+            ymin=0, ymax=90,
+            grid=both,
+            grid style={dashed, gray!40},
+            legend style={at={(1,1)}, anchor=north east, font=\scriptsize},
+            legend cell align=left,
+            every axis plot/.append style={thick, mark size=1.8pt}
+        ]
+
+        \addplot[color=green!60!black, mark=*] table[x=nx, y=v100_pure, col sep=comma] {scaling.csv};
+        \addlegendentry{NVIDIA V100 (Kernel pure)}
+
+        \addplot[color=red, mark=square*] table[x=nx, y=rx9070_pure, col sep=comma] {scaling.csv};
+        \addlegendentry{AMD RX 9070 (Kernel pure)}
+
+        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=nx, y=v100_transfer, col sep=comma] {scaling.csv};
+        \addlegendentry{NVIDIA V100 (incl. PCIe, 50 sweeps)}
+
+        \addplot[color=blue, mark=diamond*] table[x=nx, y=xeon_blocked, col sep=comma] {scaling.csv};
+        \addlegendentry{4x Xeon Gold 6230 (Blocked, \texttt{collapse(2)})}
+
+        \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=nx, y=xeon_noblock, col sep=comma] {scaling.csv};
+        \addlegendentry{4x Xeon Gold 6230 (No blocking)}
+
+        % Vertikale Cache-Grenze bei Nx = 24000
+        \draw[dash dot, gray, thick] (axis cs:24000,0) -- (axis cs:24000,90);
+        \node[anchor=west, font=\scriptsize, align=left] at (axis cs:26000,29) {3 rows exceed\\L2/L3 cache};
+
+        \end{semilogxaxis}
+    \end{tikzpicture}
+    \caption{Performance scaling across grid aspect ratios for the $S_9$ stencil}
+    \label{fig:geometry}
+\end{figure}
+
+Performance scaling across varying grid aspect ratios ($N_x \times N_y = 2^{24}$) for the $S_9$ stencil. Spatial blocking combined with OpenMP \texttt{collapse(2)} eliminates cache thrashing and thread starvation on the 80-core CPU.
+
+\begin{figure}[t]
+    \centering
+    \begin{tikzpicture}
+        \begin{loglogaxis}[
+            width=\linewidth,
+            height=8cm,
+            xlabel={Arithmetic Intensity [FLOPs/Byte]},
+            xmin=0.1, xmax=32,
+            ylabel={Performance [GFLOP/s]},
+            ymin=10, ymax=100000,
+            grid=none,
+         %   grid style={dashed, gray!40},
+            legend style={at={(1,1)}, anchor=north east, font=\scriptsize},
+            legend cell align=left,
+            every axis plot/.append style={thick, mark size=2.2pt}
+        ]
+
+        % 1. Roofline NVIDIA V100: min(1316.72 * x, 7800)
+        \addplot[color=green!60!black, domain=0.1:32, samples=200] {min(1316.72 * x, 7800)};
+        \addlegendentry{NVIDIA V100 (1317 GB/s | 7.8 TFLOP/s)}
+
+        % 2. Roofline 4x Xeon Gold 6230: min(221.3 * x, 5376)
+        \addplot[color=blue, domain=0.1:32, samples=200] {min(221.3 * x, 5376)};
+        \addlegendentry{4x Xeon Gold 6230 (221 GB/s | 5.38 TFLOP/s)}
+
+        % 3. Roofline AMD RX 9070: min(683.11 * x, 1210)
+        \addplot[color=red, domain=0.1:32, samples=200] {min(683.11 * x, 1210)};
+        \addlegendentry{AMD RX 9070 (683 GB/s | 1.21 TFLOP/s)}
+
+        % Vertikale Linie für die Arithmetische Intensität (19 FLOPs / 24 Bytes = 0.792)
+        \draw[dashed, black, thick] (axis cs:0.7917,10) -- (axis cs:0.7917,100000);
+        \node[anchor=south west, font=\scriptsize, align=left] at (axis cs:0.29,10000) {$0.79\text{ FLOP/B}$\\($19\text{ FLOPs} / 24\text{ B}$)};
+
+        % Messpunkt 1: V100 (2048x2048 -> 1018 GFLOP/s)
+        \addplot[only marks, color=green!60!black, mark=*] coordinates {(0.7917, 1018.4)};
+    %    \node[anchor=east, font=\scriptsize, color=green!60!black, align=right] at (axis cs:0.72,2000) {V100 1018 GFLOP/s};
+
+        % Messpunkt 2: RX 9070 (2048x2048 -> 485 GFLOP/s)
+        \addplot[only marks, color=red, mark=*] coordinates {(0.7917, 485.3)};
+      %  \node[anchor=west, font=\scriptsize, color=red, align=left] at (axis cs:0.87,510) {RX 9070 485 GFLOP/s};
+
+        % Messpunkt 3: Xeon L3-Cache (2048x2048, 64 MiB -> 374 GFLOP/s)
+        \addplot[only marks, color=blue, mark=*] coordinates {(0.7917, 374.0)};
+       % \node[anchor=west, font=\scriptsize, color=blue, align=right] at (axis cs:0.87,100) {Xeon 374 GFLOP/s (L3)};
+
+        % Messpunkt 4: Xeon DRAM (4096x4096, 256 MiB -> 100 GFLOP/s)
+       % \addplot[only marks, color=blue, mark=o] coordinates {(0.7917, 100.2)};
+       % \node[anchor=east, font=\scriptsize, color=blue, align=right] at (axis cs:0.72,100) {Xeon ($4096^2$, DRAM)\\$100\text{ GFLOP/s}$};
+        \node[
+            draw=black!60,
+        %    fill=white,
+        %    fill opacity=0.92,
+        %    text opacity=1,
+            anchor=south east,
+            font=\scriptsize,
+            align=left,
+            inner sep=4pt
+        ] at (rel axis cs:1,0) {
+            \textcolor{green!60!black}{$\bullet$} V100: 1018 GFLOP/s\\
+            \textcolor{red}{$\bullet$} RX 9070: 485 GFLOP/s\\
+            \textcolor{blue}{$\bullet$} Xeon: 374 GFLOP/s  (L3)
+            %\textcolor{blue}{$\bullet$} Xeon ($4096^2$, DRAM): $100\text{ GFLOP/s}$
+        };
+        \end{loglogaxis}
+    \end{tikzpicture}
+	\caption{Roofline model based on %STREAM Triad bandwidths and 
+	$S_9$ stencil performance on the $2048 \times 2048$ grid}
+    \label{fig:roofline}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{fig2_roofline_analysis.pdf}
+    \caption{Empirical Roofline model based on STREAM Triad bandwidths and $2048 \times 2048$ steady-state measurements ($5000$ sweeps).}
+    \label{fig:roofline}
+\end{figure}
+
 
