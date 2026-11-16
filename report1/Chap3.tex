@@ -51,6 +51,9 @@
 
 \begin{figure}[t]
     \centering
+    \pgfplotstableread[col sep=comma]{scaling.csv}\rawtable
+    \pgfplotstabletranspose[colnames from=Nx, input colnames to=Nx]\transposedtable{\rawtable}
+
     \begin{tikzpicture}
         \begin{semilogxaxis}[
             log basis x=2,
@@ -67,19 +70,64 @@
             every axis plot/.append style={thick, mark size=1.8pt}
         ]
 
-        \addplot[color=green!60!black, mark=*] table[x=nx, y=v100_pure, col sep=comma] {scaling.csv};
+        \addplot[color=green!60!black, mark=*] table[x=Nx, y=v100_pure] {\transposedtable};
         \addlegendentry{NVIDIA V100 (Kernel pure)}
 
-        \addplot[color=red, mark=square*] table[x=nx, y=rx9070_pure, col sep=comma] {scaling.csv};
+        \addplot[color=red, mark=square*] table[x=Nx, y=rx9070_pure] {\transposedtable};
         \addlegendentry{AMD RX 9070 (Kernel pure)}
 
-        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=nx, y=v100_transfer, col sep=comma] {scaling.csv};
+        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=Nx, y=v100_transfer] {\transposedtable};
         \addlegendentry{NVIDIA V100 (incl. PCIe, 50 sweeps)}
 
-        \addplot[color=blue, mark=diamond*] table[x=nx, y=xeon_blocked, col sep=comma] {scaling.csv};
+        \addplot[color=blue, mark=diamond*] table[x=Nx, y=xeon_blocked] {\transposedtable};
         \addlegendentry{4x Xeon Gold 6230 (Blocked, \texttt{collapse(2)})}
 
-        \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=nx, y=xeon_noblock, col sep=comma] {scaling.csv};
+        \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=Nx, y=xeon_noblock] {\transposedtable};
+        \addlegendentry{4x Xeon Gold 6230 (No blocking)}
+
+        % Vertikale Cache-Grenze bei Nx = 22000
+        \draw[dash dot, gray, thick] (axis cs:22000,0) -- (axis cs:22000,90);
+        \draw[dash dot, gray, thick] (axis cs:29000,0) -- (axis cs:29000,90);
+        \draw[dash dot, gray, thick] (axis cs:233000,0) -- (axis cs:233000,90);
+        \node[anchor=west, font=\scriptsize, align=left] at (axis cs:29000,29) {6 rows exceed\\6/8/64 MB cache};
+
+        \end{semilogxaxis}
+    \end{tikzpicture}
+    \caption{Performance scaling across grid aspect ratios for the $S_9$ stencil}
+    \label{fig:geometry}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \begin{tikzpicture}
+        \begin{semilogxaxis}[
+            log basis x=2,
+            width=\linewidth,
+            height=8cm,
+            xlabel={Grid width $N_x$ ($256\text{ MiB}$)},
+            xmin=256, xmax=2^21,
+            ylabel={Throughput [GUP/s]},
+            ymin=0, ymax=90,
+            grid=both,
+            grid style={dashed, gray!40},
+            legend style={at={(1,1)}, anchor=north east, font=\scriptsize},
+            legend cell align=left,
+            every axis plot/.append style={thick, mark size=1.8pt}
+        ]
+
+        \addplot[color=green!60!black, mark=*] table[x=nx, y=v100_pure, col sep=comma] {scaling.old.csv};
+        \addlegendentry{NVIDIA V100 (Kernel pure)}
+
+        \addplot[color=red, mark=square*] table[x=nx, y=rx9070_pure, col sep=comma] {scaling.old.csv};
+        \addlegendentry{AMD RX 9070 (Kernel pure)}
+
+        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=nx, y=v100_transfer, col sep=comma] {scaling.old.csv};
+        \addlegendentry{NVIDIA V100 (incl. PCIe, 50 sweeps)}
+
+        \addplot[color=blue, mark=diamond*] table[x=nx, y=xeon_blocked, col sep=comma] {scaling.old.csv};
+        \addlegendentry{4x Xeon Gold 6230 (Blocked, \texttt{collapse(2)})}
+
+        \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=nx, y=xeon_noblock, col sep=comma] {scaling.old.csv};
         \addlegendentry{4x Xeon Gold 6230 (No blocking)}
 
         % Vertikale Cache-Grenze bei Nx = 24000
@@ -93,6 +141,8 @@
 \end{figure}
 
 Performance scaling across varying grid aspect ratios ($N_x \times N_y = 2^{24}$) for the $S_9$ stencil. Spatial blocking combined with OpenMP \texttt{collapse(2)} eliminates cache thrashing and thread starvation on the 80-core CPU.
+
+The local recovery at $N_x = 2^{17}$ marks the upper L2 cache sweet spot on the V100: three consecutive rows require 3 MiB—fitting into the 6 MiB L2 cache alongside write buffers, while $N_x = 2^{18}$ saturates the cache and causes evictions.
 
 \begin{figure}[t]
     \centering

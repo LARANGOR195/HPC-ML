@@ -1,8 +1,8 @@
 %%%%%%%%%%%%%%%%%
 % Penalty-Verfahren
 %%%%%%%%%%%%%%%%%
-\section{Introduction and Problem Formulation}\label{cap:theo}
-Stencil computations are fundamental to many scientific simulations, yet their efficiency on modern multi-core CPUs and GPUs depends heavily on whether they are memory-bound or compute-bound. To analyze these architectural bottlenecks, we consider the Poisson equation on the unit square $\Omega = (0,1)^2$ with homogeneous Dirichlet boundary conditions:
+\section{Problem Formulation}\label{cap:theo}
+In this report, we consider the Poisson equation on the unit square $\Omega = (0,1)^2$ with homogeneous Dirichlet boundary conditions:
 \begin{eqnarray}
     %\begin{cases} 
         -\Delta u(x, y) = f & \text{for } (x, y)\in\Omega, \\ 
@@ -17,33 +17,9 @@ $S_9 = \frac{1}{6h^2} \begin{bmatrix} -1 & -4 & -1 \\ -4 & 20 & -4 \\ -1 & -4 & 
 $S_5^{\text{diag}} = \frac{1}{2h^2} \begin{bmatrix} -1 & 0 & -1 \\ 0 & 4 & 0 \\ -1 & 0 & -1 \end{bmatrix}$. 
 
 To compute the numerical solution, we apply the Jacobi method, which is notoriously known for its slow convergence. 
+The initial guess is generated randomly, and the same initial vector is used across all experiments.
+As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as the $L_2$ norm of the Jacobi step size, $\|u - v\|_2$.
 For the CPU implementation, we experiment with different block sizes, memory footprints, and core counts. 
 For the GPU implementation, we investigate different thread block dimensions, shared memory configurations, and memory access patterns.
 
-As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as the $L_2$ norm of the Jacobi step size, $\|u - v\|_2$. 
-The initial guess is generated randomly, and the exact same initial vector is used across all experiments to ensure comparability.
-
-We test our implementation with different grid sizes and stencils, and measure the time for $k$ sweeps on the CPU and on the GPU, including the transfers.
-
-
-\begin{align} \min \quad & \sum_{j \in [1, U]} x_{j}+ 1, \label{obj:ILP-PROP} \\ \text{so dass} \quad & x_{j} \geq 1 - b_{i,j} \qquad \forall v_i \in V, ~ j = 1,2,\ldots,U \label{res:ILP-PROP-xj}\\ & b_{i,j} \leq s_{i,j} + \sum_{v_l \in N(v_i)} b_{l,j-1} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bij} \\ & \sum_{v_i \in V} s_{i,j} = 1 \qquad j=1,2,\ldots,U \label{res:ILP-PROP-sij}\\ 
-& s_{i,j}, ~ b_{i,j}, ~ x_{j} \in \{0, 1\} \qquad \forall v_i \in V, ~ j=1,2,\ldots,U \label{res:ILP-PROP-bin}\\ & b_{i,0} = 0 \qquad \forall v_i \in V \label{res:ILP-PROP-bi0}
-\end{align}
-
-Die Gesamtpopulation des implementierten genetischen Algorithmus besteht aus drei Teilen, die wie folgt aufgebaut sind:
-\begin{table}[htb]
-    \centering
-    \small
-    \begin{tabular}{lrr}
-        \hline
-        Populationsteil & Anzahl der Individuen & \% \\
-        \hline
-        Eliten & 60 & 10.0 \\
-        Crossover & 450 & 75.0 \\
-        Immigranten & 90 & 15.0 \\
-        \hline
-        Summe & 600 & 100.0 \\
-        \hline
-    \end{tabular}
-\caption{Zusammensetzung der Gesamtpopulation des genetischen Algorithmus}
-\end{table}
+We test our implementation with different grid sizes and measure the time for $k$ sweeps on the CPU and on the GPU, including the transfers.
