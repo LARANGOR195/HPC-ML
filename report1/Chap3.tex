@@ -146,72 +146,101 @@ The local recovery at $N_x = 2^{17}$ marks the upper L2 cache sweet spot on the 
 
 \begin{figure}[t]
     \centering
+    % =========================================================================
+    % PARAMETER-BLOCK: Alle Werte werden hier zentral gesteuert
+    % =========================================================================
+    \pgfmathsetmacro{\flopsPerUpdate}{19}
+    \pgfmathsetmacro{\bytesPerUpdate}{24}
+    \pgfmathsetmacro{\aiVal}{\flopsPerUpdate / \bytesPerUpdate} % 0.7917 FLOP/B
+
+    % Gemessene Durchsätze in GUP/s
+    \pgfmathsetmacro{\gupV}{53.60}       % V100 -> 1018.4 GFLOP/s
+    \pgfmathsetmacro{\gupRX}{25.54}      % RX 9070 -> 485.3 GFLOP/s
+    \pgfmathsetmacro{\gupXeon}{19.68}    % Xeon L3 -> 374.0 GFLOP/s
+
+    % Hardware-Limits (Bandbreite in GB/s und Peak in GFLOP/s)
+    \pgfmathsetmacro{\bwV}{1316.72}
+    \pgfmathsetmacro{\bwXeon}{221.3}
+    \pgfmathsetmacro{\bwRX}{683.11}
+    \pgfmathsetmacro{\peakV}{8200}    
+    \pgfmathsetmacro{\peakXeon}{5376}    
+    \pgfmathsetmacro{\peakRX}{1210}
+
+    % Automatische Umrechnung in GFLOP/s
+    \pgfmathsetmacro{\perfV}{\gupV * \flopsPerUpdate}
+    \pgfmathsetmacro{\perfRX}{\gupRX * \flopsPerUpdate}
+    \pgfmathsetmacro{\perfXeon}{\gupXeon * \flopsPerUpdate}
+    
+    % Automatische Formatierung für die Legenden-Texte (GB/s gerundet, TFLOP/s = GFLOP/s / 1000)
+    \pgfmathprintnumberto[fixed, precision=0, 1000 sep={}]{\bwV}{\bwVStr}
+    \pgfmathsetmacro{\tflopV}{\peakV / 1000}
+    \pgfmathprintnumberto[fixed, precision=1]{\tflopV}{\tflopVStr}
+
+    \pgfmathprintnumberto[fixed, precision=0, 1000 sep={}]{\bwXeon}{\bwXeonStr}
+    \pgfmathsetmacro{\tflopXeon}{\peakXeon / 1000}
+    \pgfmathprintnumberto[fixed, precision=2]{\tflopXeon}{\tflopXeonStr}
+
+    \pgfmathprintnumberto[fixed, precision=0, 1000 sep={}]{\bwRX}{\bwRXStr}
+    \pgfmathsetmacro{\tflopRX}{\peakRX / 1000}
+    \pgfmathprintnumberto[fixed, precision=2]{\tflopRX}{\tflopRXStr}
+
+    \pgfmathprintnumberto[fixed, precision=2]{\aiVal}{\aiStr}
+    % =========================================================================
+
     \begin{tikzpicture}
         \begin{loglogaxis}[
             width=\linewidth,
             height=8cm,
             xlabel={Arithmetic Intensity [FLOPs/Byte]},
-            xmin=0.1, xmax=32,
+            xmin=0.1, xmax=100,
             ylabel={Performance [GFLOP/s]},
             ymin=10, ymax=100000,
             grid=none,
-         %   grid style={dashed, gray!40},
             legend style={at={(1,1)}, anchor=north east, font=\scriptsize},
             legend cell align=left,
             every axis plot/.append style={thick, mark size=2.2pt}
         ]
 
-        % 1. Roofline NVIDIA V100: min(1316.72 * x, 7800)
-        \addplot[color=green!60!black, domain=0.1:32, samples=200] {min(1316.72 * x, 7800)};
-        \addlegendentry{NVIDIA V100 (1317 GB/s | 7.8 TFLOP/s)}
+        % 1. Roofline NVIDIA V100
+        \addplot[color=green!60!black, domain=0.1:100, samples=200] {min(\bwV * x, \peakV)};
+        \addlegendentryexpanded{V100 (\bwVStr\ GB/s | \tflopVStr\ TFLOP/s)}
 
-        % 2. Roofline 4x Xeon Gold 6230: min(221.3 * x, 5376)
-        \addplot[color=blue, domain=0.1:32, samples=200] {min(221.3 * x, 5376)};
-        \addlegendentry{4x Xeon Gold 6230 (221 GB/s | 5.38 TFLOP/s)}
+        % 2. Roofline 4x Xeon Gold 6230
+        \addplot[color=blue, domain=0.1:100, samples=200] {min(\bwXeon * x, \peakXeon)};
+        \addlegendentryexpanded{4x Xeon Gold 6230 (\bwXeonStr\ GB/s | \tflopXeonStr\ TFLOP/s)}
 
-        % 3. Roofline AMD RX 9070: min(683.11 * x, 1210)
-        \addplot[color=red, domain=0.1:32, samples=200] {min(683.11 * x, 1210)};
-        \addlegendentry{AMD RX 9070 (683 GB/s | 1.21 TFLOP/s)}
+        % 3. Roofline AMD RX 9070
+        \addplot[color=red, domain=0.1:100, samples=200] {min(\bwRX * x, \peakRX)};
+        \addlegendentryexpanded{RX 9070 (\bwRXStr\ GB/s | \tflopRXStr\ TFLOP/s)}
 
-        % Vertikale Linie für die Arithmetische Intensität (19 FLOPs / 24 Bytes = 0.792)
-        \draw[dashed, black, thick] (axis cs:0.7917,10) -- (axis cs:0.7917,100000);
-        \node[anchor=south west, font=\scriptsize, align=left] at (axis cs:0.29,10000) {$0.79\text{ FLOP/B}$\\($19\text{ FLOPs} / 24\text{ B}$)};
+        % Vertikale Linie für die Arithmetische Intensität
+        \draw[dashed, black, thick] (axis cs:\aiVal,10) -- (axis cs:\aiVal,100000);
+        \node[anchor=south west, font=\scriptsize, align=left] at (axis cs:0.29,10000) {$\aiStr\text{ FLOP/B}$\\($\flopsPerUpdate\text{ FLOPs} / \bytesPerUpdate\text{ B}$)};
 
-        % Messpunkt 1: V100 (2048x2048 -> 1018 GFLOP/s)
-        \addplot[only marks, color=green!60!black, mark=*] coordinates {(0.7917, 1018.4)};
-    %    \node[anchor=east, font=\scriptsize, color=green!60!black, align=right] at (axis cs:0.72,2000) {V100 1018 GFLOP/s};
+        % Messpunkt 1: V100
+        \addplot[only marks, color=green!60!black, mark=*] coordinates {(\aiVal, \perfV)};
 
-        % Messpunkt 2: RX 9070 (2048x2048 -> 485 GFLOP/s)
-        \addplot[only marks, color=red, mark=*] coordinates {(0.7917, 485.3)};
-      %  \node[anchor=west, font=\scriptsize, color=red, align=left] at (axis cs:0.87,510) {RX 9070 485 GFLOP/s};
+        % Messpunkt 2: RX 9070
+        \addplot[only marks, color=red, mark=*] coordinates {(\aiVal, \perfRX)};
 
-        % Messpunkt 3: Xeon L3-Cache (2048x2048, 64 MiB -> 374 GFLOP/s)
-        \addplot[only marks, color=blue, mark=*] coordinates {(0.7917, 374.0)};
-       % \node[anchor=west, font=\scriptsize, color=blue, align=right] at (axis cs:0.87,100) {Xeon 374 GFLOP/s (L3)};
+        % Messpunkt 3: Xeon L3-Cache
+        \addplot[only marks, color=blue, mark=*] coordinates {(\aiVal, \perfXeon)};
 
-        % Messpunkt 4: Xeon DRAM (4096x4096, 256 MiB -> 100 GFLOP/s)
-       % \addplot[only marks, color=blue, mark=o] coordinates {(0.7917, 100.2)};
-       % \node[anchor=east, font=\scriptsize, color=blue, align=right] at (axis cs:0.72,100) {Xeon ($4096^2$, DRAM)\\$100\text{ GFLOP/s}$};
+        % Info-Box unten rechts
         \node[
             draw=black!60,
-        %    fill=white,
-        %    fill opacity=0.92,
-        %    text opacity=1,
             anchor=south east,
             font=\scriptsize,
             align=left,
             inner sep=4pt
         ] at (rel axis cs:1,0) {
-            \textcolor{green!60!black}{$\bullet$} V100: 1018 GFLOP/s\\
-            \textcolor{red}{$\bullet$} RX 9070: 485 GFLOP/s\\
-            \textcolor{blue}{$\bullet$} Xeon: 374 GFLOP/s  (L3)
-            %\textcolor{blue}{$\bullet$} Xeon ($4096^2$, DRAM): $100\text{ GFLOP/s}$
+            \textcolor{green!60!black}{$\bullet$} V100: \pgfmathprintnumber[fixed, precision=0, 1000 sep={}]{\perfV} GFLOP/s\\
+            \textcolor{red}{$\bullet$} RX 9070: \pgfmathprintnumber[fixed, precision=0, 1000 sep={}]{\perfRX} GFLOP/s\\
+            \textcolor{blue}{$\bullet$} Xeon: \pgfmathprintnumber[fixed, precision=0, 1000 sep={}]{\perfXeon} GFLOP/s  (L3)
         };
         \end{loglogaxis}
     \end{tikzpicture}
-	\caption{Roofline model based on %STREAM Triad bandwidths and 
-	$S_9$ stencil performance on the $2048 \times 2048$ grid}
+    \caption{Roofline model based on $S_9$ stencil performance on the $2048 \times 2048$ grid}
     \label{fig:roofline}
 \end{figure}
-
 
