@@ -1,54 +1,16 @@
 %%%%%%%%%%%%%%%%%
 % Lösung von Nazeri et al. 
 %%%%%%%%%%%%%%%%%
-\section{CPU Results}
-\lstset{%
-    language         = C++,
-    inputencoding    = utf8,
-    extendedchars=true,
-    literate=%
-    {ő}{{{\H{o}}}}1
-        {Ő}{{{\H{O}}}}1
-        {ö}{{\"o}}1 {ä}{{\"a}}1 {ü}{{\"u}}1 
-        {Ö}{{\"O}}1 {Ä}{{\"A}}1 {Ü}{{\"U}}1 
-        {ß}{{\ss}}1 
-         {ű}{{\H{u}}}1 {Ű}{{\H{U}}}1 % Hungarian fix
-        {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1,
-    basicstyle       = \scriptsize\ttfamily,
-    keywordstyle     = \bfseries\color{blue},
-    stringstyle      = \color{magenta},
-    commentstyle     = \color{ForestGreen},
-    showstringspaces = false,
-}
-\lstset{ 
-  basicstyle=\scriptsize\ttfamily\linespread{0.7}\selectfont,        % the size of the fonts that are used for the code
-  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
-  breaklines=true,                 % sets automatic line breaking
-  captionpos=b,                    % sets the caption-position to bottom
-  %commentstyle=\itshape\color{red},    % comment style
- % deletekeywords={...},            % if you want to delete keywords from the given language
-%  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
-  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
-  %firstnumber=1000,                % start line enumeration with line 1000
-  frame=single,	                   % adds a frame around the code
-  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
- % keywordstyle=\color{blue},       % keyword style
-  %language=Octave,                 % the language of the code
-  %morekeywords={*,...},            % if you want to add more keywords to the set
-  numbers=none,                    % where to put the line-numbers; possible values are (none, left, right)
-  numbersep=5pt,                   % how far the line-numbers are from the code
-  %numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
-  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
-  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
-  showstringspaces=false,          % underline spaces within strings only
-  showtabs=false,                  % show tabs within strings adding particular underscores
-  stepnumber=5,                    % the step between two line-numbers. If it's 1, each line will be numbered
- % stringstyle=\color{mymauve},     % string literal style
-  tabsize=1 ,	                   % sets default tabsize to 2 spaces
-  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
-%  caption={~/Downloads/Kunoth-21/julia/Blatt07/qrsvd.jl}
-}
-
+\section{Results}
+Varying the grid width $N_x$ such that $N_x \cdot N_y = 2^{24}$ exposes the cache limits of each platform. 
+Since $U$ and $V$ swap roles after every sweep, at least three active rows of each matrix must reside simultaneously in cache to achieve temporal reuse. 
+The active memory working set is computed as follows: $6 \cdot (N_x + 2) \cdot 8$ B. 
+Hence, the maximum row length for a given cache capacity is limited by $N_x \leq \lfloor \text{Cache size} \cdot 2^{20} / 48 \rfloor - 2$. 
+Consequently, we expect to observe performance degradation at the points where the L1, L2, and L3 caches are respectively exhausted.
+\subsection{CPU}
+The system is equipped with four Intel Xeon Gold 6230 processors, providing a total of 80 physical cores. 
+Each core features a 32-KiB L1 data cache and a 1024-KiB L2 cache, while a 27.5-MiB shared L3 cache is available per socket. 
+Using 80 cores with an OMP close binding strategy results in a cumulative cache capacity of 192.5 MiB across the architecture.
 \begin{figure}[t]
     \centering
     \pgfplotstableread[col sep=comma]{scaling.csv}\rawtable
@@ -59,7 +21,7 @@
             log basis x=2,
             width=\linewidth,
             height=8cm,
-            xlabel={Grid width $N_x$ ($256\text{ MiB}$)},
+            xlabel={Grid width $N_x$},
             xmin=256, xmax=2^21,
             ylabel={Throughput [GUP/s]},
             ymin=0, ymax=90,
@@ -76,7 +38,7 @@
         \addplot[color=red, mark=square*] table[x=Nx, y=rx9070_pure] {\transposedtable};
         \addlegendentry{AMD RX 9070 (Kernel pure)}
 
-        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=Nx, y=v100_transfer] {\transposedtable};
+        \addplot[color=green!60!black, dashed, mark=*] table[x=Nx, y=v100_transfer] {\transposedtable};
         \addlegendentry{NVIDIA V100 (incl. PCIe, 50 sweeps)}
 
         \addplot[color=blue, mark=diamond*] table[x=Nx, y=xeon_blocked] {\transposedtable};
@@ -85,11 +47,14 @@
         \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=Nx, y=xeon_noblock] {\transposedtable};
         \addlegendentry{4x Xeon Gold 6230 (No blocking)}
 
-        % Vertikale Cache-Grenze bei Nx = 22000
-        \draw[dash dot, gray, thick] (axis cs:22000,0) -- (axis cs:22000,90);
-        \draw[dash dot, gray, thick] (axis cs:29000,0) -- (axis cs:29000,90);
-        \draw[dash dot, gray, thick] (axis cs:233000,0) -- (axis cs:233000,90);
-        \node[anchor=west, font=\scriptsize, align=left] at (axis cs:29000,29) {6 rows exceed\\6/8/64 MB cache};
+        % Vertikale Cache-Grenze 
+        \draw[dash dot, blue, thick] (axis cs:680,0) -- (axis cs:680,90);
+        \draw[dash dot, blue, thick] (axis cs:21843,0) -- (axis cs:21843,90);
+        \draw[dash dot, blue, thick] (axis cs:52563,0) -- (axis cs:52563,90);
+        \draw[dash dot, green!60!black, thick] (axis cs:131070,0) -- (axis cs:131070,90);
+        \draw[dash dot, red, thick] (axis cs:174760,0) -- (axis cs:174760,90);
+        \draw[dash dot, red, thick] (axis cs:1398099,0) -- (axis cs:1398099,90);
+        \node[anchor=west, font=\scriptsize, align=left] at (axis cs:25000,29) {6 rows exceed\\6/8/64 MB cache};
 
         \end{semilogxaxis}
     \end{tikzpicture}
@@ -97,53 +62,73 @@
     \label{fig:geometry}
 \end{figure}
 
-\begin{figure}[t]
-    \centering
-    \begin{tikzpicture}
-        \begin{semilogxaxis}[
-            log basis x=2,
-            width=\linewidth,
-            height=8cm,
-            xlabel={Grid width $N_x$ ($256\text{ MiB}$)},
-            xmin=256, xmax=2^21,
-            ylabel={Throughput [GUP/s]},
-            ymin=0, ymax=90,
-            grid=both,
-            grid style={dashed, gray!40},
-            legend style={at={(1,1)}, anchor=north east, font=\scriptsize},
-            legend cell align=left,
-            every axis plot/.append style={thick, mark size=1.8pt}
-        ]
+The unblocked execution sustains high throughput above 4.37 GUP/s up to $N_x = 2^{14}$, where the working set fits within L1+L2 cache, and degrades steadily to 1.25 GUP/s once the per-core L3 capacity is exceeded. 
+For the L3 cache, we compute the cumulative on-chip capacity per socket as follows: $20 \cdot (\text{L1} + \text{L2}) + \text{L3}$. Since 20 cores concurrently process $20 \times 6$ active rows, the upper bound for the row width within the total socket cache is given by $N_x \leq \lfloor (20 \cdot (32 + 1024) \cdot 2^{10} + 27.5 \cdot 2^{20}) / (120 \cdot 8) \rfloor - 2$, which yields $N_x \leq 52563$.
 
-        \addplot[color=green!60!black, mark=*] table[x=nx, y=v100_pure, col sep=comma] {scaling.old.csv};
-        \addlegendentry{NVIDIA V100 (Kernel pure)}
+Spatial cache blocking eliminates this degradation by restricting the active working set to a cache-resident width via the \path{--tile} \texttt{4096} configuration. 
+In this case, the six active rows fit entirely within the L2 cache hierarchy, thereby maintaining a stable throughput above 4.25 GUP/s.
 
-        \addplot[color=red, mark=square*] table[x=nx, y=rx9070_pure, col sep=comma] {scaling.old.csv};
-        \addlegendentry{AMD RX 9070 (Kernel pure)}
+Note the significant spike to 7.36 GUP/s in the blocked data at $N_x = 2^{16}$. 
+This is due to optimal data alignment with the 64-byte cache lines and memory page boundaries. 
+At this specific power of two, the memory addresses of the matrix rows map perfectly into different slots of the CPU's associative cache. 
+This prevents cache thrashing, meaning the six active rows do not evict each other from the cache. 
+Consequently, the AVX-512 vector units can load data with maximum bandwidth without any penalties for unaligned memory access. 
+The unblocked data does not display such an effect because the active working set completely overflows the cache hierarchy at $N_x = 2^{16}$.
 
-        \addplot[color=green!70!lime, dashed, mark=triangle*] table[x=nx, y=v100_transfer, col sep=comma] {scaling.old.csv};
-        \addlegendentry{NVIDIA V100 (incl. PCIe, 50 sweeps)}
+\subsection{GPU}
+The Intel node is equipped with an NVIDIA Tesla V100S PCIe 32GB GPU featuring 80 Streaming Multiprocessors (SM) and a shared 6-MiB L2 cache. 
+Each SM contains 32 FP64 cores, yielding a total of 2560 FP64 cores. 
+Furthermore, each SM provides a 128-KiB unified memory block that is shared between the L1 cache and shared memory.
+ 
+The V100S performance remains on a high plateau above 55.3 GUP/s up to $N_x = 2^{14}$ because the $\texttt{-{-}block 32x8}$ configuration decomposes the grid into local tiles. 
+Each tile requires $(32 + 2) \cdot (8 + 2) \cdot 8$ B = 2720 B of memory, fitting into the 128-KiB local cache of each SM. 
+At these problem sizes, the memory required by the working set of six matrix rows, computed as $6 \cdot (N_x + 2) \cdot 8$ B, remains small enough to be cached by the shared 6-MiB L2 cache.
 
-        \addplot[color=blue, mark=diamond*] table[x=nx, y=xeon_blocked, col sep=comma] {scaling.old.csv};
-        \addlegendentry{4x Xeon Gold 6230 (Blocked, \texttt{collapse(2)})}
+The slight degradation at $2^{15}$ and $2^{16}$ does not represent an L1-to-L2 transition, as the local $32 \times 8$ tiles still fit into the SM's L1 cache. 
+Instead, it is caused by cache-way thrashing within the shared L2 cache. 
+Because these problem sizes are strict powers of two, the memory addresses of the stencil's neighboring rows map to the exact same cache sets, forcing data evictions before they can be reused. 
 
-        \addplot[color=black, dotted, mark=triangle*, mark options={rotate=180}] table[x=nx, y=xeon_noblock, col sep=comma] {scaling.old.csv};
-        \addlegendentry{4x Xeon Gold 6230 (No blocking)}
+However, a significant performance peak occurs at $N_x = 2^{17}$. 
+At this specific power of two, perfect memory coalescing and optimal alignment with the HBM2 memory channels completely eliminate bank conflicts. 
 
-        % Vertikale Cache-Grenze bei Nx = 24000
-        \draw[dash dot, gray, thick] (axis cs:24000,0) -- (axis cs:24000,90);
-        \node[anchor=west, font=\scriptsize, align=left] at (axis cs:26000,29) {3 rows exceed\\L2/L3 cache};
+For $N_x \geq 2^{18}$, the L2 cache is exhausted, and the execution rate drops to a stable, memory-bound plateau at approximately 42 GUP/s enabled by the bandwidth of the HBM2 memory.
 
-        \end{semilogxaxis}
-    \end{tikzpicture}
-    \caption{Performance scaling across grid aspect ratios for the $S_9$ stencil}
-    \label{fig:geometry}
-\end{figure}
+The AMD RX 9070 GPU features 56 Compute Units (CUs), a 32-KiB L0 vector cache per CU, a 128-KiB L1 cache per Shader Array, an 8-MiB L2 cache, and a 64-MiB Infinity Cache. 
+The GPU is subdivided into 8 Shader Arrays housing 7 active CUs each. 
+Throughout the benchmark, it remains FP64 compute-bound, resulting in a stable throughput plateau between 15.2 and 15.9 GUP/s across all tested problem sizes. 
+This behavior is achieved because a $\texttt{-{-}block 64x8}$ configuration optimally aligns with AMD's Wavefront execution model. 
+Furthermore, since the 64-MiB Infinity Cache fully absorbs the active working set (i.e., 6 matrix rows containing $N_x + 2$ \texttt{double} values each), the GDDR6 memory interface never bottlenecks the computation.
 
-Performance scaling across varying grid aspect ratios ($N_x \times N_y = 2^{24}$) for the $S_9$ stencil. Spatial blocking combined with OpenMP \texttt{collapse(2)} eliminates cache thrashing and thread starvation on the 80-core CPU.
+\section{Roofline Model}
+Figure~\ref{fig:roofline} presents the results for the $S_9$ stencil performance on the $2048 \times 2048$ grid. 
+Our Jacobi stencil code always requires 19 arithmetic operations (9 multiplications, 8 additions, 1 multiplication, and 1 subtraction), leading to an arithmetic intensity of $19/24 \approx 0.792$ FLOP/B when utilizing the cache, and $19/40 = 0.475$ FLOP/B otherwise. 
 
-The local recovery at $N_x = 2^{17}$ marks the upper L2 cache sweet spot on the V100: three consecutive rows require 3 MiB—fitting into the 6 MiB L2 cache alongside write buffers, while $N_x = 2^{18}$ saturates the cache and causes evictions.
 
+The Intel CPU achieves approximately 17.05 GUP/s, which translates to a sustained performance of 323.95 GFLOP/s based on the 19 arithmetic operations per grid update. 
+The theoretical memory-bandwidth ceiling is computed as Bandwidth $\cdot$ AI. 
+For the unblocked execution utilizing the main memory interface with an arithmetic intensity of $19/40 = 0.475$ FLOP/B, the performance is strictly limited by this slope. 
+In contrast, spatial blocking increases the arithmetic intensity to $19/24 \approx 0.792$ FLOP/B and fully retains the active working set within the architecture's on-chip cache layers. 
+This bypasses the slower main memory interface completely, allowing the execution to transcend the sloped bandwidth ceiling and operate entirely within the flat, compute-bound regime.
+
+This observation is well above the bandwidth restriction dictated by main memory interface limits. 
+This throughput is achieved because the cumulative 192.5 MiB of on-chip cache across the 4-socket system fully caches the blocked working set, thereby bypassing the DRAM bottleneck and allowing the execution to remain in the cache-bound regime.
+
+The AMD GPU maintains approximately 15.5 GUP/s, which translates to a sustained performance of 294.5 GFLOP/s based on the 19 arithmetic operations per grid update.
+This is well under the 1.21 TFLOP/s FP64 peak performance communicated by the manufacturer, indicating that while the execution remains compute-bound within the Infinity Cache, it operates below the theoretical hardware limit. %due to internal instruction scheduling and pipeline latencies.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccccccc}
+\hline
+Platform & AI & Bandw. & Theor. Limit & Obs. GUP/s & FLOP & Obs. Perf. & Obs. Util. \\
+\hline
+Xeon Gold 6230 & 0.792 & 229.7 & 181.9 & 17.05 & 19 & 324.0 & 1.781 \\
+Nvidia V100 & 0.792 & 1313.2 & 1040.0 & 53.50 & 19 & 1016.5 & 0.977 \\
+RX 9070 & 0.792 & 683.1 & 541.0 & 25.54 & 19 & 485.3 & 0.897 \\
+\hline
+\end{tabular}
+\end{table}
+ 
 \begin{figure}[t]
     \centering
     % =========================================================================
@@ -154,13 +139,13 @@ The local recovery at $N_x = 2^{17}$ marks the upper L2 cache sweet spot on the 
     \pgfmathsetmacro{\aiVal}{\flopsPerUpdate / \bytesPerUpdate} % 0.7917 FLOP/B
 
     % Gemessene Durchsätze in GUP/s
-    \pgfmathsetmacro{\gupV}{53.60}       % V100 -> 1018.4 GFLOP/s
+    \pgfmathsetmacro{\gupV}{53.50}       % V100 -> 1018.4 GFLOP/s
     \pgfmathsetmacro{\gupRX}{25.54}      % RX 9070 -> 485.3 GFLOP/s
-    \pgfmathsetmacro{\gupXeon}{19.68}    % Xeon L3 -> 374.0 GFLOP/s
+    \pgfmathsetmacro{\gupXeon}{17.05}    % Xeon L3 -> 374.0 GFLOP/s
 
     % Hardware-Limits (Bandbreite in GB/s und Peak in GFLOP/s)
-    \pgfmathsetmacro{\bwV}{1316.72}
-    \pgfmathsetmacro{\bwXeon}{221.3}
+    \pgfmathsetmacro{\bwV}{1313.18}
+    \pgfmathsetmacro{\bwXeon}{229.7}
     \pgfmathsetmacro{\bwRX}{683.11}
     \pgfmathsetmacro{\peakV}{8200}    
     \pgfmathsetmacro{\peakXeon}{5376}    

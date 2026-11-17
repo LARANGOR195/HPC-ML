@@ -1,83 +1,31 @@
 %%%%%%%%%%%%%%%%%
 % Implementierung
 %%%%%%%%%%%%%%%%%
-\section{GPU Results}
-
-\lstset{%
-    language         = C++,
-    inputencoding    = utf8,
-    extendedchars=true,
-    literate=%
-    {ő}{{{\H{o}}}}1
-        {Ő}{{{\H{O}}}}1
-        {ö}{{\"o}}1 {ä}{{\"a}}1 {ü}{{\"u}}1 
-        {Ö}{{\"O}}1 {Ä}{{\"A}}1 {Ü}{{\"U}}1 
-        {ß}{{\ss}}1 
-         {ű}{{\H{u}}}1 {Ű}{{\H{U}}}1 % Hungarian fix
-        {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1,
-    basicstyle       = \scriptsize\ttfamily,
-    keywordstyle     = \bfseries\color{blue},
-    stringstyle      = \color{magenta},
-    commentstyle     = \color{ForestGreen},
-    showstringspaces = false,
-}
-\lstset{ 
-  basicstyle=\scriptsize\ttfamily,        % the size of the fonts that are used for the code
-  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
-  breaklines=true,                 % sets automatic line breaking
-  captionpos=b,                    % sets the caption-position to bottom
-  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
-  frame=single,	                   % adds a frame around the code
-  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
-  numbers=none,                    % where to put the line-numbers; possible values are (none, left, right)
-  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
-  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
-  showstringspaces=false,          % underline spaces within strings only
-  showtabs=false,                  % show tabs within strings adding particular underscores
-  stepnumber=5,                    % the step between two line-numbers. If it's 1, each line will be numbered
-  tabsize=1 ,	                   % sets default tabsize to 2 spaces
-  title=\lstname                   
-}
-
-%\lstinputlisting[language=C, firstline=1, lastline=5, caption={Aufbau einer Testinstanz anhand von $P_{64}$}, 
-%frame=none, %resetmargins=true, 
-%linewidth=1.0\linewidth]{./Data/P64.csv}
-\begin{lstlisting}[
-    language={}, 
-    frame=none,
-    caption={Beschreibung einer Instanz anhand von \texttt{P64.csv} (Ausschnitt)}, 
-    label={lst:p64_aufbau}
-]
-P64
-64 63 1 0
-1 2
-2 3
-3 4
-\end{lstlisting}
-
-\texttt{./run.sh -p SQRT QUADRATIC -c DEGREE CLOSENESS -v 65 -r 10}
-
+\section{Data Transfer}
+In order to compute the stencil on the GPU, two $(N_x + 2) \times (N_y + 2)$ matrices must be transferred across the PCIe bus. 
+The break-even point for different matrix sizes is presented in Table~\ref{tab:breakeven}. 
+Mathematically, the break-even iteration count $C$ is determined using the reference benchmark of $k_{max}$ sweeps as follows:
 \begin{equation}
-%\begin{split}
-p \colon \mathbb N_{0}^{|\mathdutch{u}|} \to \mathbb R_{\geq 0}, \quad \mathdutch{u} \mapsto \begin{cases} 
-\xi \displaystyle\sum_{v_i \in \mathdutch{u}} d_i^j \text{ laut Tabelle \ref{tab:Chap04_tab_p_option}, } & \text{falls } |\mathdutch{u}| < \texttt{threshold} \\
-c\xi \,|\mathdutch{u}|,  & \text{falls } |\mathdutch{u}| \geq \texttt{threshold}.
-\end{cases}
-%\end{split}
-\label{eq:penalty}
+C \geq \left\lceil \frac{t_{\text{GPU}}^{\text{total}} - t_{\text{GPU}}^{\text{comp}}}{t_{\text{CPU}} - t_{\text{GPU}}^{\text{comp}}} \cdot k_{max} \right\rceil
 \end{equation}
-Die Konstante $c$ entspricht dabei dem Wert \texttt{INF} im Programm und wird in Abhängigkeit von $j$ und \texttt{threshold} mindestens so hoch gewählt wie die Summe der ersten $|\mathdutch{u}|$ natürlichen Zahlen in der $j$-ten Potenz 
-\begin{equation}
-\sum_{1 \leq i \leq |\mathdutch{u}|} i^j 
-\end{equation}
-ausgewertet für $|\mathdutch{u}| = \texttt{threshold}$. 
 
-\begin{itemize}
-\item \texttt{BETWEENNESS}, \texttt{DEGREE}, \texttt{CLOSENESS} und \texttt{EIGENVECTOR} zählen zu den häufigsten Zentralitätsmaßen in der Literatur \cite{Gau22, NAZERI2023, Ko05} sowie \cite[Kap. 7]{New18} und \cite[Kap. 6]{J03}.
-\item \texttt{BETWEENNESS} und \texttt{EIGENVECTOR} werden in vergleichbaren Studien \cite{Gau22, NAZERI2023} als zentrale Maße eingesetzt.
-\end{itemize}
 
-{\small{\texttt{\#include <networkit/centrality/KatzCentrality.hpp>}}}
- 
-und der entspechende Codeblock (siehe Listing~\ref{lst:computeCentralityScores}) in die Methode \texttt{computeCentralityScores} eingefügt werden. Zudem muss die neue Abkürzung an je zwei Stellen in den Dateien \texttt{main.cpp} und \texttt{CentralityComputer.hpp} in den Listen der erlaubten Werte ergänzt werden. Die optionale Skalierung der Werte mit einem konstanten Faktor kann dazu beitragen, eine Division durch sehr kleine Werte zu vermeiden. 
+\begin{table}[h]
+\centering
+\begin{tabular}{ccccccc}
+\hline
+$N_x$ & $N_y$ & Data Volume, & $t_{\text{CPU}}$, & $t_{\text{GPU}}^{\text{comp}}$, & $t_{\text{GPU}}^{\text{total}}$, & $C$ \\
+ & & B & s & s & s &  \\
+\hline
+512 & 512 & 4227136 & 0.325990 & 0.021383 & 0.022280 & 15 \\
+1024 & 1024 & 16842816 & 0.549269 & 0.109162 & 0.112152 & 34 \\
+2048 & 2048 & 67240000 & 1.229826 & 0.392133 & 0.407212 & 91 \\
+4096 & 4096 & 268697664 & 9.502977 & 1.531174 & 1.577928 & 30 \\
+\hline
+\end{tabular}
+\caption{Break-even point for GPU execution, based on a reference benchmark of $S_9$ and $k_{max} = 5000$ sweeps.}
+\label{tab:breakeven} 
+\end{table}
+To ensure that a GPU execution is advantageous, we recommend configuring a minimum of $C \geq 100$ iterations. 
+
 

@@ -22,4 +22,6 @@ As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as 
 For the CPU implementation, we experiment with different block sizes, memory footprints, and core counts. 
 For the GPU implementation, we investigate different thread block dimensions, shared memory configurations, and memory access patterns.
 
+For the CPU implementation, we analyze spatial cache blocking, OpenMP thread pinning (close binding), and varying memory footprints across grid aspect ratios. For the GPU implementation, we employ a tuned 32x8 thread-block configuration to ensure coalesced memory access, evaluating both pure kernel throughput and host-device PCIe transfer overhead.
+
 We test our implementation with different grid sizes and measure the time for $k$ sweeps on the CPU and on the GPU, including the transfers.
