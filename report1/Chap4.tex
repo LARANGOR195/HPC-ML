@@ -2,17 +2,17 @@
 % Implementierung
 %%%%%%%%%%%%%%%%%
 \section{Data Transfer}
-In order to compute the stencil on the GPU, two $(N_x + 2) \times (N_y + 2)$ matrices must be transferred across the PCIe bus. 
-The break-even point for different matrix sizes is presented in Table~\ref{tab:breakeven}. 
-Mathematically, the break-even iteration count $C$ is determined using the reference benchmark of $k_{max}$ sweeps as follows:
+In order to run the Jacobi method on the GPU, two $(N_x + 2) \times (N_y + 2)$ matrices must be transferred across the PCIe bus. 
+The break-even iteration count $C$ is determined from the execution times of $k_{max}$ sweeps as follows:
 \begin{equation}
-C \geq \left\lceil \frac{t_{\text{GPU}}^{\text{total}} - t_{\text{GPU}}^{\text{comp}}}{t_{\text{CPU}} - t_{\text{GPU}}^{\text{comp}}} \cdot k_{max} \right\rceil
+C \geq \left\lceil \frac{t_{\text{GPU}}^{\text{total}} - t_{\text{GPU}}^{\text{comp}}}{t_{\text{CPU}} - t_{\text{GPU}}^{\text{comp}}} \cdot k_{max} \right\rceil .
 \end{equation}
-
+The break-even point for different matrix sizes is presented in Table~\ref{tab:breakeven}. 
+To ensure that a GPU execution is advantageous, we recommend configuring a minimum of $C \geq 100$ iterations. 
 
 \begin{table}[h]
 \centering
-\begin{tabular}{ccccccc}
+\begin{tabular}{rrrrrrr}
 \hline
 $N_x$ & $N_y$ & Data Volume, & $t_{\text{CPU}}$, & $t_{\text{GPU}}^{\text{comp}}$, & $t_{\text{GPU}}^{\text{total}}$, & $C$ \\
  & & B & s & s & s &  \\
@@ -23,9 +23,8 @@ $N_x$ & $N_y$ & Data Volume, & $t_{\text{CPU}}$, & $t_{\text{GPU}}^{\text{comp}}
 4096 & 4096 & 268697664 & 9.502977 & 1.531174 & 1.577928 & 30 \\
 \hline
 \end{tabular}
-\caption{Break-even point for GPU execution, based on a reference benchmark of $S_9$ and $k_{max} = 5000$ sweeps.}
+\caption{Break-even point for GPU execution, based on $S_9$ and $k_{max} = 5000$}
 \label{tab:breakeven} 
 \end{table}
-To ensure that a GPU execution is advantageous, we recommend configuring a minimum of $C \geq 100$ iterations. 
 
 

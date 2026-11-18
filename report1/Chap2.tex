@@ -16,12 +16,15 @@ $S_5 = \frac{1}{h^2} \begin{bmatrix} 0 & -1 & 0 \\ -1 & 4 & -1 \\ 0 & -1 & 0 \en
 $S_9 = \frac{1}{6h^2} \begin{bmatrix} -1 & -4 & -1 \\ -4 & 20 & -4 \\ -1 & -4 & -1 \end{bmatrix}$, and 
 $S_5^{\text{diag}} = \frac{1}{2h^2} \begin{bmatrix} -1 & 0 & -1 \\ 0 & 4 & 0 \\ -1 & 0 & -1 \end{bmatrix}$. 
 
-To compute the numerical solution, we apply the Jacobi method, which is notoriously known for its slow convergence. 
+To determine the solution, we apply the Jacobi method, which is well known for its slow convergence. 
 The initial guess is generated randomly, and the same initial vector is used across all experiments.
 As a stopping criterion, we use a maximum iteration count $k_{\max}$ as well as the $L_2$ norm of the Jacobi step size, $\|u - v\|_2$.
-For the CPU implementation, we experiment with different block sizes, memory footprints, and core counts. 
-For the GPU implementation, we investigate different thread block dimensions, shared memory configurations, and memory access patterns.
 
-For the CPU implementation, we analyze spatial cache blocking, OpenMP thread pinning (close binding), and varying memory footprints across grid aspect ratios. For the GPU implementation, we employ a tuned 32x8 thread-block configuration to ensure coalesced memory access, evaluating both pure kernel throughput and host-device PCIe transfer overhead.
+For the CPU implementation, we analyze spatial cache blocking, OpenMP thread pinning (\texttt{close} binding), and varying memory footprints across grid aspect ratios. For the GPU implementation, we employ a tuned 32x8 thread-block configuration to ensure coalesced memory access, evaluating both pure kernel throughput and host-device PCIe transfer overhead.
 
-We test our implementation with different grid sizes and measure the time for $k$ sweeps on the CPU and on the GPU, including the transfers.
+Our implementation evaluates three stencils, four discretization sizes, and three GPU thread-block configurations. 
+In this short report, we present and discuss results only for the compact $S_9$ stencil applied to a $2048 \times 2048$ matrix with the \texttt{-{}-block 32x8}  configuration, 
+as we consider these results to be representative of the other two stencils as well. 
+
+We measure the runtime for $k$ sweeps on both the CPU and on the GPU, including data transfers, and compute the break-even point, 
+defined as the minimum number of Jacobi steps required for GPU execution to become advantageous.

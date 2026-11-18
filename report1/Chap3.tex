@@ -2,9 +2,10 @@
 % Lösung von Nazeri et al. 
 %%%%%%%%%%%%%%%%%
 \section{Results}
+Figure 1 illustrates the performance scaling across grid aspect ratios for the $S_9$ stencil. 
 Varying the grid width $N_x$ such that $N_x \cdot N_y = 2^{24}$ exposes the cache limits of each platform. 
 Since $U$ and $V$ swap roles after every sweep, at least three active rows of each matrix must reside simultaneously in cache to achieve temporal reuse. 
-The active memory working set is computed as follows: $6 \cdot (N_x + 2) \cdot 8$ B. 
+Consequently, the active memory working set of six \texttt{double}-precision rows is given by $6 \cdot (N_x + 2) \cdot 8$ bytes. 
 Hence, the maximum row length for a given cache capacity is limited by $N_x \leq \lfloor \text{Cache size} \cdot 2^{20} / 48 \rfloor - 2$. 
 Consequently, we expect to observe performance degradation at the points where the L1, L2, and L3 caches are respectively exhausted.
 \subsection{CPU}
@@ -118,15 +119,16 @@ This is well under the 1.21 TFLOP/s FP64 peak performance communicated by the ma
 
 \begin{table}[h]
 \centering
-\begin{tabular}{lccccccc}
+\begin{tabular}{lrrrrrrr}
 \hline
-Platform & AI & Bandw. & Theor. Limit & Obs. GUP/s & FLOP & Obs. Perf. & Obs. Util. \\
+Platform & Ar. Int. & Bandw. & Theor. Limit & Obs. GUP/s & FLOP & Obs. Perf. & Obs. Util. \\
 \hline
 Xeon Gold 6230 & 0.792 & 229.7 & 181.9 & 17.05 & 19 & 324.0 & 1.781 \\
 Nvidia V100 & 0.792 & 1313.2 & 1040.0 & 53.50 & 19 & 1016.5 & 0.977 \\
 RX 9070 & 0.792 & 683.1 & 541.0 & 25.54 & 19 & 485.3 & 0.897 \\
 \hline
 \end{tabular}
+\caption{Theoretical Roofline limits and observed performance metrics for the $S_9$ stencil}
 \end{table}
  
 \begin{figure}[t]
