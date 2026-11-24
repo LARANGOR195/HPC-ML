@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%
 % Implementierung
 %%%%%%%%%%%%%%%%%
-\section{Data Transfer}
+\section{Data Transfer Amortization}
 In order to run the Jacobi method on the GPU, two $(N_x + 2) \times (N_y + 2)$ matrices must be transferred across the PCIe bus. 
 The break-even iteration count $C$ is determined from the execution times of $k_{max}$ sweeps as follows:
 \begin{equation}
